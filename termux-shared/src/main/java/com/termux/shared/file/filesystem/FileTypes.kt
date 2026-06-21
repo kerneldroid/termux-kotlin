@@ -1,36 +1,42 @@
-package com.termux.shared.file.filesystem;
+package com.termux.shared.file.filesystem
 
-import android.system.Os;
+import com.termux.shared.logger.Logger
 
-import androidx.annotation.NonNull;
-
-import com.termux.shared.logger.Logger;
-
-import java.io.File;
-
-public class FileTypes {
+object FileTypes {
 
     /** Flags to represent regular, directory and symlink file types defined by {@link FileType} */
-    public static final int FILE_TYPE_NORMAL_FLAGS = FileType.REGULAR.getValue() | FileType.DIRECTORY.getValue() | FileType.SYMLINK.getValue();
+    @JvmField
+    val FILE_TYPE_NORMAL_FLAGS = FileType.REGULAR.getValue() or FileType.DIRECTORY.getValue() or FileType.SYMLINK.getValue()
 
     /** Flags to represent any file type defined by {@link FileType} */
-    public static final int FILE_TYPE_ANY_FLAGS = Integer.MAX_VALUE; // 1111111111111111111111111111111 (31 1's)
+    const val FILE_TYPE_ANY_FLAGS = Int.MAX_VALUE // 1111111111111111111111111111111 (31 1's)
 
-    public static String convertFileTypeFlagsToNamesString(int fileTypeFlags) {
-        StringBuilder fileTypeFlagsStringBuilder = new StringBuilder();
+    @JvmStatic
+    fun convertFileTypeFlagsToNamesString(fileTypeFlags: Int): String {
+        val fileTypeFlagsStringBuilder = StringBuilder()
 
-        FileType[] fileTypes = {FileType.REGULAR, FileType.DIRECTORY, FileType.SYMLINK, FileType.CHARACTER, FileType.FIFO, FileType.BLOCK, FileType.UNKNOWN};
-        for (FileType fileType : fileTypes) {
-            if ((fileTypeFlags & fileType.getValue()) > 0)
-                fileTypeFlagsStringBuilder.append(fileType.getName()).append(",");
+        val fileTypes = arrayOf(
+            FileType.REGULAR,
+            FileType.DIRECTORY,
+            FileType.SYMLINK,
+            FileType.CHARACTER,
+            FileType.FIFO,
+            FileType.BLOCK,
+            FileType.UNKNOWN
+        )
+        for (fileType in fileTypes) {
+            if ((fileTypeFlags and fileType.getValue()) > 0) {
+                fileTypeFlagsStringBuilder.append(fileType.getName()).append(",")
+            }
         }
 
-        String fileTypeFlagsString = fileTypeFlagsStringBuilder.toString();
+        var fileTypeFlagsString = fileTypeFlagsStringBuilder.toString()
 
-        if (fileTypeFlagsString.endsWith(","))
-            fileTypeFlagsString = fileTypeFlagsString.substring(0, fileTypeFlagsString.lastIndexOf(","));
+        if (fileTypeFlagsString.endsWith(",")) {
+            fileTypeFlagsString = fileTypeFlagsString.substring(0, fileTypeFlagsString.lastIndexOf(","))
+        }
 
-        return fileTypeFlagsString;
+        return fileTypeFlagsString
     }
 
     /**
@@ -82,38 +88,34 @@ public class FileTypes {
      *                       returned.
      * @return Returns the {@link FileType} of file.
      */
-    @NonNull
-    public static FileType getFileType(final String filePath, final boolean followLinks) {
-        if (filePath == null || filePath.isEmpty()) return FileType.NO_EXIST;
+    @JvmStatic
+    fun getFileType(filePath: String?, followLinks: Boolean): FileType {
+        if (filePath.isNullOrEmpty()) return FileType.NO_EXIST
 
-        try {
-            FileAttributes fileAttributes = FileAttributes.get(filePath, followLinks);
-            return getFileType(fileAttributes);
-        } catch (Exception e) {
+        return try {
+            val fileAttributes = FileAttributes.get(filePath, followLinks)
+            getFileType(fileAttributes)
+        } catch (e: Exception) {
             // If not a ENOENT (No such file or directory) exception
-            if (e.getMessage() != null && !e.getMessage().contains("ENOENT"))
-                Logger.logError("Failed to get file type for file at path \"" + filePath + "\": " + e.getMessage());
-            return FileType.NO_EXIST;
+            val message = e.message
+            if (message != null && !message.contains("ENOENT")) {
+                Logger.logError("Failed to get file type for file at path \"$filePath\": $message")
+            }
+            FileType.NO_EXIST
         }
     }
 
-    public static FileType getFileType(@NonNull final FileAttributes fileAttributes) {
-        if (fileAttributes.isRegularFile())
-            return FileType.REGULAR;
-        else if (fileAttributes.isDirectory())
-            return FileType.DIRECTORY;
-        else if (fileAttributes.isSymbolicLink())
-            return FileType.SYMLINK;
-        else if (fileAttributes.isSocket())
-            return FileType.SOCKET;
-        else if (fileAttributes.isCharacter())
-            return FileType.CHARACTER;
-        else if (fileAttributes.isFifo())
-            return FileType.FIFO;
-        else if (fileAttributes.isBlock())
-            return FileType.BLOCK;
-        else
-            return FileType.UNKNOWN;
+    @JvmStatic
+    fun getFileType(fileAttributes: FileAttributes): FileType {
+        return when {
+            fileAttributes.isRegularFile -> FileType.REGULAR
+            fileAttributes.isDirectory -> FileType.DIRECTORY
+            fileAttributes.isSymbolicLink -> FileType.SYMLINK
+            fileAttributes.isSocket -> FileType.SOCKET
+            fileAttributes.isCharacter -> FileType.CHARACTER
+            fileAttributes.isFifo -> FileType.FIFO
+            fileAttributes.isBlock -> FileType.BLOCK
+            else -> FileType.UNKNOWN
+        }
     }
-
 }
