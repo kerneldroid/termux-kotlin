@@ -107,7 +107,7 @@ object UserUtils {
 
             val structPasswd: Any?
             try {
-                val getpwuidMethod = ReflectionUtils.getDeclaredMethod(forwardingOsClass, "getpwuid", Int::class.javaPrimitiveType)
+                val getpwuidMethod = ReflectionUtils.getDeclaredMethod(forwardingOsClass, "getpwuid", Int::class.javaPrimitiveType!!)
                 if (getpwuidMethod == null) return null
                 structPasswd = ReflectionUtils.invokeMethod(getpwuidMethod, os, uid).value
             } catch (e: Exception) {

@@ -6,6 +6,7 @@ import android.text.Spanned
 import android.text.style.AbsoluteSizeSpan
 import android.text.style.BackgroundColorSpan
 import android.text.style.BulletSpan
+import android.text.style.CharacterStyle
 import android.text.style.QuoteSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
@@ -196,7 +197,7 @@ object MarkdownUtils {
                         .setFactory(BlockQuote::class.java) { _, _ -> QuoteSpan() }
                         .setFactory(Strikethrough::class.java) { _, _ -> StrikethroughSpan() }
                         .setFactory(Code::class.java) { _, _ ->
-                            arrayOf<Any>(
+                            arrayOf<CharacterStyle>(
                                 BackgroundColorSpan(
                                     ContextCompat.getColor(
                                         context,
