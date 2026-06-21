@@ -23,46 +23,35 @@
  * questions.
  */
 
-package com.termux.shared.file.filesystem;
+package com.termux.shared.file.filesystem
 
 /**
  * Container for device/inode to uniquely identify file.
  * https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:libcore/ojluni/src/main/java/sun/nio/fs/UnixFileKey.java
  */
+class FileKey internal constructor(
+    private val st_dev: Long,
+    private val st_ino: Long
+) {
 
-public class FileKey {
-    private final long st_dev;
-    private final long st_ino;
-
-    FileKey(long st_dev, long st_ino) {
-        this.st_dev = st_dev;
-        this.st_ino = st_ino;
+    override fun hashCode(): Int {
+        return (st_dev xor (st_dev ushr 32)).toInt() +
+                (st_ino xor (st_ino ushr 32)).toInt()
     }
 
-    @Override
-    public int hashCode() {
-        return (int)(st_dev ^ (st_dev >>> 32)) +
-            (int)(st_ino ^ (st_ino >>> 32));
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is FileKey) return false
+        return (st_dev == other.st_dev) && (st_ino == other.st_ino)
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this)
-            return true;
-        if (!(obj instanceof FileKey))
-            return false;
-        FileKey other = (FileKey)obj;
-        return (this.st_dev == other.st_dev) && (this.st_ino == other.st_ino);
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
+    override fun toString(): String {
+        val sb = StringBuilder()
         sb.append("(dev=")
-            .append(Long.toHexString(st_dev))
+            .append(java.lang.Long.toHexString(st_dev))
             .append(",ino=")
             .append(st_ino)
-            .append(')');
-        return sb.toString();
+            .append(')')
+        return sb.toString()
     }
 }

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -24,21 +23,20 @@
  * questions.
  */
 
-package com.termux.shared.file.filesystem;
+package com.termux.shared.file.filesystem
 
 /**
- * Defines the bits for use with the {@link FileAttributes#permissions()
- * permissions} attribute.
+ * Defines the bits for use with the [FileAttributes.permissions]
+ * permissions attribute.
  *
- * <p> The {@link FileAttributes} class defines methods for manipulating
+ * <p> The [FileAttributes] class defines methods for manipulating
  * set of permissions.
  *
  * https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:libcore/ojluni/src/main/java/java/nio/file/attribute/PosixFilePermission.java
  *
  * @since 1.7
  */
-
-public enum FilePermission {
+enum class FilePermission {
 
     /**
      * Read permission, owner.
