@@ -77,7 +77,7 @@ class TermuxSession private constructor(
      */
     fun killIfExecuting(context: Context, processResult: Boolean) {
         // If execution command has already finished executing, then no need to process results or send SIGKILL
-        if (executionCommand.hasExecuted()) {
+        if (executionCommand.hasExecuted) {
             Logger.logDebug(LOG_TAG, "Ignoring sending SIGKILL to \"" + executionCommand.commandIdAndLabelLogString + "\" TermuxSession since it has already finished executing")
             return
         }
@@ -150,14 +150,19 @@ class TermuxSession private constructor(
             additionalEnvironment: HashMap<String, String>?,
             setStdoutOnExit: Boolean
         ): TermuxSession? {
-            if (executionCommand.executable != null && executionCommand.executable.isEmpty()) {
+            var executable = executionCommand.executable
+            if (executable != null && executable.isEmpty()) {
+                executable = null
                 executionCommand.executable = null
             }
-            if (executionCommand.workingDirectory == null || executionCommand.workingDirectory.isEmpty()) {
-                executionCommand.workingDirectory = shellEnvironmentClient.getDefaultWorkingDirectoryPath()
+            var workingDirectory = executionCommand.workingDirectory
+            if (workingDirectory == null || workingDirectory.isEmpty()) {
+                workingDirectory = shellEnvironmentClient.getDefaultWorkingDirectoryPath()
+                executionCommand.workingDirectory = workingDirectory
             }
-            if (executionCommand.workingDirectory.isEmpty()) {
-                executionCommand.workingDirectory = "/"
+            if (workingDirectory.isEmpty()) {
+                workingDirectory = "/"
+                executionCommand.workingDirectory = workingDirectory
             }
 
             var defaultBinPath = shellEnvironmentClient.getDefaultBinPath()
@@ -166,18 +171,19 @@ class TermuxSession private constructor(
             }
 
             var isLoginShell = false
-            if (executionCommand.executable == null) {
+            if (executable == null) {
                 if (!executionCommand.isFailsafe) {
                     for (shellBinary in UnixShellEnvironment.LOGIN_SHELL_BINARIES) {
                         val shellFile = File(defaultBinPath, shellBinary)
                         if (shellFile.canExecute()) {
-                            executionCommand.executable = shellFile.absolutePath
+                            executable = shellFile.absolutePath
+                            executionCommand.executable = executable
                             break
                         }
                     }
                 }
 
-                if (executionCommand.executable == null) {
+                if (executable == null) {
                     // Fall back to system shell as last resort:
                     // Do not start a login shell since ~/.profile may cause startup failure if its invalid.
                     // /system/bin/sh is provided by mksh (not toybox) and does load .mkshrc but for android its set
@@ -186,17 +192,19 @@ class TermuxSession private constructor(
                     // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/src/main.c;l=663
                     // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/src/main.c;l=41
                     // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:external/mksh/Android.bp;l=114
-                    executionCommand.executable = "/system/bin/sh"
+                    executable = "/system/bin/sh"
+                    executionCommand.executable = executable
                 } else {
                     isLoginShell = true
                 }
             }
 
             // Setup command args
-            val commandArgs = shellEnvironmentClient.setupShellCommandArguments(executionCommand.executable, executionCommand.arguments)
+            val commandArgs = shellEnvironmentClient.setupShellCommandArguments(executable, executionCommand.arguments)
 
-            executionCommand.executable = commandArgs[0]
-            val processName = (if (isLoginShell) "-" else "") + ShellUtils.getExecutableBasename(executionCommand.executable)
+            executable = commandArgs[0]
+            executionCommand.executable = executable
+            val processName = (if (isLoginShell) "-" else "") + ShellUtils.getExecutableBasename(executable)
 
             val arguments = Array(commandArgs.size) { "" }
             arguments[0] = processName

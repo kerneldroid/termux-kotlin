@@ -57,12 +57,12 @@ object TermuxPluginUtils {
         var error: Error? = null
         val resultData = executionCommand.resultData
 
-        if (!executionCommand.hasExecuted()) {
+        if (!executionCommand.hasExecuted) {
             Logger.logWarn(tag, executionCommand.commandIdAndLabelLogString + ": Ignoring call to processPluginExecutionCommandResult() since the execution command state is not higher than the ExecutionState.EXECUTED")
             return
         }
 
-        val isPluginExecutionCommandWithPendingResult = executionCommand.isPluginExecutionCommandWithPendingResult()
+        val isPluginExecutionCommandWithPendingResult = executionCommand.isPluginExecutionCommandWithPendingResult
         val isExecutionCommandLoggingEnabled = Logger.shouldEnableLoggingForCustomLogLevel(executionCommand.backgroundCustomLogLevel)
 
         // Log the output. ResultData should not be logged if pending result since ResultSender will do it
@@ -164,7 +164,7 @@ object TermuxPluginUtils {
             return
         }
 
-        val isPluginExecutionCommandWithPendingResult = executionCommand.isPluginExecutionCommandWithPendingResult()
+        val isPluginExecutionCommandWithPendingResult = executionCommand.isPluginExecutionCommandWithPendingResult
         val isExecutionCommandLoggingEnabled = Logger.shouldEnableLoggingForCustomLogLevel(executionCommand.backgroundCustomLogLevel)
 
         // Log the error and any exception. ResultData should not be logged if pending result since ResultSender will do it

@@ -99,7 +99,7 @@ object PhantomProcessUtils {
             true
         )
         val stderrSet = executionCommand.resultData.stderr.toString().isNotEmpty()
-        if (appShell == null || !executionCommand.isSuccessful() || executionCommand.resultData.exitCode != 0 || stderrSet) {
+        if (appShell == null || !executionCommand.isSuccessful || executionCommand.resultData.exitCode != 0 || stderrSet) {
             Logger.logErrorExtended(LOG_TAG, executionCommand.toString())
             return null
         }

@@ -161,7 +161,7 @@ class AppShell private constructor(
      */
     fun killIfExecuting(context: Context, processResult: Boolean) {
         // If execution command has already finished executing, then no need to process results or send SIGKILL
-        if (executionCommand.hasExecuted()) {
+        if (executionCommand.hasExecuted) {
             Logger.logDebug(
                 LOG_TAG,
                 "Ignoring sending SIGKILL to \"" + executionCommand.commandIdAndLabelLogString + "\" AppShell since it has already finished executing"
@@ -253,7 +253,8 @@ class AppShell private constructor(
             additionalEnvironment: HashMap<String, String>?,
             isSynchronous: Boolean
         ): AppShell? {
-            if (executionCommand.executable == null || executionCommand.executable.isEmpty()) {
+            val executable = executionCommand.executable
+            if (executable == null || executable.isEmpty()) {
                 executionCommand.setStateFailed(
                     Errno.ERRNO_FAILED.code,
                     currentPackageContext.getString(
@@ -265,15 +266,18 @@ class AppShell private constructor(
                 return null
             }
 
-            if (executionCommand.workingDirectory == null || executionCommand.workingDirectory.isEmpty()) {
-                executionCommand.workingDirectory = shellEnvironmentClient.getDefaultWorkingDirectoryPath()
+            var workingDirectory = executionCommand.workingDirectory
+            if (workingDirectory == null || workingDirectory.isEmpty()) {
+                workingDirectory = shellEnvironmentClient.getDefaultWorkingDirectoryPath()
+                executionCommand.workingDirectory = workingDirectory
             }
-            if (executionCommand.workingDirectory.isEmpty()) {
-                executionCommand.workingDirectory = "/"
+            if (workingDirectory.isEmpty()) {
+                workingDirectory = "/"
+                executionCommand.workingDirectory = workingDirectory
             }
 
             // Transform executable path to shell/session name, e.g. "/bin/do-something.sh" => "do-something.sh".
-            val executableBasename = ShellUtils.getExecutableBasename(executionCommand.executable)
+            val executableBasename = ShellUtils.getExecutableBasename(executable)
 
             if (executionCommand.shellName == null) {
                 executionCommand.shellName = executableBasename
@@ -285,7 +289,7 @@ class AppShell private constructor(
 
             // Setup command args
             val commandArray = shellEnvironmentClient.setupShellCommandArguments(
-                executionCommand.executable,
+                executable,
                 executionCommand.arguments
             )
 
