@@ -1,54 +1,45 @@
-package com.termux.shared.file;
+package com.termux.shared.file
 
-import android.os.Build;
-import android.system.Os;
+import android.os.Build
+import android.system.Os
+import com.google.common.io.RecursiveDeleteOption
+import com.termux.shared.data.DataUtils
+import com.termux.shared.errors.Errno
+import com.termux.shared.errors.Error
+import com.termux.shared.errors.FunctionErrno
+import com.termux.shared.file.filesystem.FileType
+import com.termux.shared.file.filesystem.FileTypes
+import com.termux.shared.logger.Logger
+import org.apache.commons.io.filefilter.AgeFileFilter
+import org.apache.commons.io.filefilter.IOFileFilter
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.Closeable
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.OutputStreamWriter
+import java.io.Serializable
+import java.nio.charset.Charset
+import java.nio.file.LinkOption
+import java.nio.file.StandardCopyOption
+import java.util.Calendar
+import java.util.regex.Pattern
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import com.google.common.io.RecursiveDeleteOption;
-import com.termux.shared.file.filesystem.FileType;
-import com.termux.shared.file.filesystem.FileTypes;
-import com.termux.shared.data.DataUtils;
-import com.termux.shared.logger.Logger;
-import com.termux.shared.errors.Errno;
-import com.termux.shared.errors.Error;
-import com.termux.shared.errors.FunctionErrno;
-
-import org.apache.commons.io.filefilter.AgeFileFilter;
-import org.apache.commons.io.filefilter.IOFileFilter;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Serializable;
-import java.nio.charset.Charset;
-import java.nio.file.LinkOption;
-import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.regex.Pattern;
-
-public class FileUtils {
+object FileUtils {
 
     /** Required file permissions for the executable file for app usage. Executable file must have read and execute permissions */
-    public static final String APP_EXECUTABLE_FILE_PERMISSIONS = "r-x"; // Default: "r-x"
+    const val APP_EXECUTABLE_FILE_PERMISSIONS = "r-x" // Default: "r-x"
+
     /** Required file permissions for the working directory for app usage. Working directory must have read and write permissions.
      * Execute permissions should be attempted to be set, but ignored if they are missing */
-    public static final String APP_WORKING_DIRECTORY_PERMISSIONS = "rwx"; // Default: "rwx"
+    const val APP_WORKING_DIRECTORY_PERMISSIONS = "rwx" // Default: "rwx"
 
-    private static final String LOG_TAG = "FileUtils";
+    private const val LOG_TAG = "FileUtils"
 
     /**
      * Get canonical path.
@@ -68,27 +59,27 @@ public class FileUtils {
      *                                 will automatically do this anyways.
      * @return Returns the {@code canonical path}.
      */
-    public static String getCanonicalPath(String path, final String prefixForNonAbsolutePath) {
-        if (path == null) path = "";
+    @JvmStatic
+    fun getCanonicalPath(path: String?, prefixForNonAbsolutePath: String?): String {
+        val p = path ?: ""
 
-        String absolutePath;
-
-        // If path is already an absolute path
-        if (path.startsWith("/")) {
-            absolutePath = path;
+        val absolutePath = if (p.startsWith("/")) {
+            p
         } else {
-            if (prefixForNonAbsolutePath != null)
-                absolutePath = prefixForNonAbsolutePath + "/" + path;
-            else
-                absolutePath = "/" + path;
+            if (prefixForNonAbsolutePath != null) {
+                "$prefixForNonAbsolutePath/$p"
+            } else {
+                "/$p"
+            }
         }
 
         try {
-            return new File(absolutePath).getCanonicalPath();
-        } catch(Exception e) {
+            return File(absolutePath).canonicalPath
+        } catch (e: Exception) {
+            // ignore
         }
 
-        return absolutePath;
+        return absolutePath
     }
 
     /**
@@ -99,18 +90,18 @@ public class FileUtils {
      * @param path The {@code path} to convert.
      * @return Returns the {@code normalized path}.
      */
-    @Nullable
-    public static String normalizePath(String path) {
-        if (path == null) return null;
+    @JvmStatic
+    fun normalizePath(path: String?): String? {
+        if (path == null) return null
 
-        path = path.replaceAll("/+", "/");
-        path = path.replaceAll("\\./", "");
+        var p = path.replace(Regex("/+"), "/")
+        p = p.replace(Regex("\\./"), "")
 
-        if (path.endsWith("/")) {
-            path = path.replaceAll("/+$", "");
+        if (p.endsWith("/")) {
+            p = p.replace(Regex("/+$"), "")
         }
 
-        return path;
+        return p
     }
 
     /**
@@ -122,18 +113,18 @@ public class FileUtils {
      * @param toLower If set to {@code true}, then file name will be converted to lower case.
      * @return Returns the {@code sanitized name}.
      */
-    public static String sanitizeFileName(String fileName, boolean sanitizeWhitespaces, boolean toLower) {
-        if (fileName == null) return null;
+    @JvmStatic
+    fun sanitizeFileName(fileName: String?, sanitizeWhitespaces: Boolean, toLower: Boolean): String? {
+        if (fileName == null) return null
 
-        if (sanitizeWhitespaces)
-            fileName = fileName.replaceAll("[\\\\/:*?\"<>| \t\n]", "_");
-        else
-            fileName = fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
+        var name = fileName
+        name = if (sanitizeWhitespaces) {
+            name.replace(Regex("[\\\\/:*?\"<>| \t\n]"), "_")
+        } else {
+            name.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        }
 
-        if (toLower)
-            return fileName.toLowerCase();
-        else
-            return fileName;
+        return if (toLower) name.lowercase() else name
     }
 
     /**
@@ -146,8 +137,9 @@ public class FileUtils {
      *                    under the directory and does not equal it.
      * @return Returns {@code true} if path in {@code dirPath}, otherwise returns {@code false}.
      */
-    public static boolean isPathInDirPath(String path, final String dirPath, final boolean ensureUnder) {
-        return isPathInDirPaths(path, Collections.singletonList(dirPath), ensureUnder);
+    @JvmStatic
+    fun isPathInDirPath(path: String?, dirPath: String?, ensureUnder: Boolean): Boolean {
+        return isPathInDirPaths(path, listOf(dirPath), ensureUnder)
     }
 
     /**
@@ -160,32 +152,30 @@ public class FileUtils {
      *                    under the directories and does not equal it.
      * @return Returns {@code true} if path in {@code dirPaths}, otherwise returns {@code false}.
      */
-    public static boolean isPathInDirPaths(String path, final List<String> dirPaths, final boolean ensureUnder) {
-        if (path == null || path.isEmpty() || dirPaths == null || dirPaths.size() < 1) return false;
+    @JvmStatic
+    fun isPathInDirPaths(path: String?, dirPaths: List<String?>?, ensureUnder: Boolean): Boolean {
+        if (path.isNullOrEmpty() || dirPaths.isNullOrEmpty()) return false
 
-        try {
-            path = new File(path).getCanonicalPath();
-        } catch(Exception e) {
-            return false;
+        val canonicalPath = try {
+            File(path).canonicalPath
+        } catch (e: Exception) {
+            return false
         }
 
-        boolean isPathInDirPaths;
+        for (dirPath in dirPaths) {
+            val normalizedDirPath = normalizePath(dirPath) ?: continue
 
-        for (String dirPath : dirPaths) {
-            String normalizedDirPath = normalizePath(dirPath);
+            val isPathInDirPaths = if (ensureUnder) {
+                canonicalPath != normalizedDirPath && canonicalPath.startsWith("$normalizedDirPath/")
+            } else {
+                canonicalPath.startsWith("$normalizedDirPath/")
+            }
 
-            if (ensureUnder)
-                isPathInDirPaths = !path.equals(normalizedDirPath) && path.startsWith(normalizedDirPath + "/");
-            else
-                isPathInDirPaths = path.startsWith(normalizedDirPath + "/");
-
-            if (isPathInDirPaths) return true;
+            if (isPathInDirPaths) return true
         }
 
-        return false;
+        return false
     }
-
-
 
     /**
      * Validate that directory is empty or contains only files in {@code ignoredSubFilePaths}.
@@ -204,50 +194,63 @@ public class FileUtils {
      * exist in the {@code ignoredSubFilePaths}, otherwise returns an appropriate {@code error} if
      * checking was not successful.
      */
-    public static Error validateDirectoryFileEmptyOrOnlyContainsSpecificFiles(String label, String filePath,
-                                                                              final List<String> ignoredSubFilePaths,
-                                                                              final boolean ignoreNonExistentFile) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "isDirectoryFileEmptyOrOnlyContainsSpecificFiles");
+    @JvmStatic
+    fun validateDirectoryFileEmptyOrOnlyContainsSpecificFiles(
+        label: String?,
+        filePath: String?,
+        ignoredSubFilePaths: List<String>?,
+        ignoreNonExistentFile: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(
+                "${lbl}file path",
+                "isDirectoryFileEmptyOrOnlyContainsSpecificFiles"
+            )
+        }
 
         try {
-            File file = new File(filePath);
-            FileType fileType = getFileType(filePath, false);
+            val file = File(filePath)
+            val fileType = getFileType(filePath, false)
 
             // If file exists but not a directory file
             if (fileType != FileType.NO_EXIST && fileType != FileType.DIRECTORY) {
-                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError(label + "directory", filePath).setLabel(label + "directory");
+                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError("${lbl}directory", filePath)
+                    .setLabel("${lbl}directory")
             }
 
             // If file does not exist
             if (fileType == FileType.NO_EXIST) {
                 // If checking is to be ignored if file does not exist
-                if (ignoreNonExistentFile)
-                    return null;
-                else {
-                    label += "directory to check if is empty or only contains specific files";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+                return if (ignoreNonExistentFile) {
+                    null
+                } else {
+                    val finalLbl = "${lbl}directory to check if is empty or only contains specific files"
+                    FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
                 }
             }
 
-            File[] subFiles = file.listFiles();
-            if (subFiles == null || subFiles.length == 0)
-                return null;
+            val subFiles = file.listFiles()
+            if (subFiles == null || subFiles.isEmpty()) {
+                return null
+            }
 
             // If sub files exists but no file should be ignored
-            if (ignoredSubFilePaths == null || ignoredSubFilePaths.size() == 0)
-                return FileUtilsErrno.ERRNO_NON_EMPTY_DIRECTORY_FILE.getError(label, filePath);
+            if (ignoredSubFilePaths.isNullOrEmpty()) {
+                return FileUtilsErrno.ERRNO_NON_EMPTY_DIRECTORY_FILE.getError(lbl, filePath)
+            }
 
             // If a sub file does not exist in ignored file path
             if (nonIgnoredSubFileExists(subFiles, ignoredSubFilePaths)) {
-                return FileUtilsErrno.ERRNO_NON_EMPTY_DIRECTORY_FILE.getError(label, filePath);
+                return FileUtilsErrno.ERRNO_NON_EMPTY_DIRECTORY_FILE.getError(lbl, filePath)
             }
 
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_VALIDATE_DIRECTORY_EMPTY_OR_ONLY_CONTAINS_SPECIFIC_FILES_FAILED_WITH_EXCEPTION.getError(e, label + "directory", filePath, e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_VALIDATE_DIRECTORY_EMPTY_OR_ONLY_CONTAINS_SPECIFIC_FILES_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}directory", filePath, e.message)
         }
 
-        return null;
+        return null
     }
 
     /**
@@ -265,38 +268,37 @@ public class FileUtils {
      * @return Returns {@code true} if a file was found that did not exist in the {@code ignoredSubFilePaths},
      * otherwise  {@code false}.
      */
-    public static boolean nonIgnoredSubFileExists(File[] subFiles, @NonNull List<String> ignoredSubFilePaths) {
-        if (subFiles == null || subFiles.length == 0) return false;
+    @JvmStatic
+    fun nonIgnoredSubFileExists(subFiles: Array<File>?, ignoredSubFilePaths: List<String>): Boolean {
+        if (subFiles == null || subFiles.isEmpty()) return false
 
-        String subFilePath;
-        for (File subFile : subFiles) {
-            subFilePath = subFile.getAbsolutePath();
+        for (subFile in subFiles) {
+            val subFilePath = subFile.absolutePath
             // If sub file does not exist in ignored sub file paths
             if (!ignoredSubFilePaths.contains(subFilePath)) {
-                boolean isParentPath = false;
-                for (String ignoredSubFilePath : ignoredSubFilePaths) {
-                    if (ignoredSubFilePath.startsWith(subFilePath + "/") && fileExists(ignoredSubFilePath, false)) {
-                        isParentPath = true;
-                        break;
+                var isParentPath = false
+                for (ignoredSubFilePath in ignoredSubFilePaths) {
+                    if (ignoredSubFilePath.startsWith("$subFilePath/") && fileExists(ignoredSubFilePath, false)) {
+                        isParentPath = true
+                        break
                     }
                 }
                 // If sub file is not a parent of any existing ignored sub file paths
                 if (!isParentPath) {
-                    return true;
+                    return true
                 }
             }
-                
+
             if (getFileType(subFilePath, false) == FileType.DIRECTORY) {
                 // If non ignored sub file found, then early exit, otherwise continue looking
-                if (nonIgnoredSubFileExists(subFile.listFiles(), ignoredSubFilePaths))
-                     return true;
+                if (nonIgnoredSubFileExists(subFile.listFiles(), ignoredSubFilePaths)) {
+                    return true
+                }
             }
         }
 
-        return false;
+        return false
     }
-
-
 
     /**
      * Checks whether a regular file exists at {@code filePath}.
@@ -307,8 +309,9 @@ public class FileUtils {
      *                       for details.
      * @return Returns {@code true} if regular file exists, otherwise {@code false}.
      */
-    public static boolean regularFileExists(final String filePath, final boolean followLinks) {
-        return getFileType(filePath, followLinks) == FileType.REGULAR;
+    @JvmStatic
+    fun regularFileExists(filePath: String?, followLinks: Boolean): Boolean {
+        return getFileType(filePath, followLinks) == FileType.REGULAR
     }
 
     /**
@@ -320,8 +323,9 @@ public class FileUtils {
      *                       for details.
      * @return Returns {@code true} if directory file exists, otherwise {@code false}.
      */
-    public static boolean directoryFileExists(final String filePath, final boolean followLinks) {
-        return getFileType(filePath, followLinks) == FileType.DIRECTORY;
+    @JvmStatic
+    fun directoryFileExists(filePath: String?, followLinks: Boolean): Boolean {
+        return getFileType(filePath, followLinks) == FileType.DIRECTORY
     }
 
     /**
@@ -330,8 +334,9 @@ public class FileUtils {
      * @param filePath The {@code path} for symlink file to check.
      * @return Returns {@code true} if symlink file exists, otherwise {@code false}.
      */
-    public static boolean symlinkFileExists(final String filePath) {
-        return getFileType(filePath, false) == FileType.SYMLINK;
+    @JvmStatic
+    fun symlinkFileExists(filePath: String?): Boolean {
+        return getFileType(filePath, false) == FileType.SYMLINK
     }
 
     /**
@@ -343,9 +348,10 @@ public class FileUtils {
      *                       for details.
      * @return Returns {@code true} if regular or directory file exists, otherwise {@code false}.
      */
-    public static boolean regularOrDirectoryFileExists(final String filePath, final boolean followLinks) {
-        FileType fileType = getFileType(filePath, followLinks);
-        return fileType == FileType.REGULAR || fileType == FileType.DIRECTORY;
+    @JvmStatic
+    fun regularOrDirectoryFileExists(filePath: String?, followLinks: Boolean): Boolean {
+        val fileType = getFileType(filePath, followLinks)
+        return fileType == FileType.REGULAR || fileType == FileType.DIRECTORY
     }
 
     /**
@@ -357,8 +363,9 @@ public class FileUtils {
      *                       for details.
      * @return Returns {@code true} if file exists, otherwise {@code false}.
      */
-    public static boolean fileExists(final String filePath, final boolean followLinks) {
-        return getFileType(filePath, followLinks) != FileType.NO_EXIST;
+    @JvmStatic
+    fun fileExists(filePath: String?, followLinks: Boolean): Boolean {
+        return getFileType(filePath, followLinks) != FileType.NO_EXIST
     }
 
     /**
@@ -375,12 +382,10 @@ public class FileUtils {
      *                       returned.
      * @return Returns the {@link FileType} of file.
      */
-    @NonNull
-    public static FileType getFileType(final String filePath, final boolean followLinks) {
-        return FileTypes.getFileType(filePath, followLinks);
+    @JvmStatic
+    fun getFileType(filePath: String?, followLinks: Boolean): FileType {
+        return FileTypes.getFileType(filePath, followLinks)
     }
-
-
 
     /**
      * Validate the existence and permissions of regular file at path.
@@ -403,42 +408,56 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a regular file, or validating permissions
      * failed, otherwise {@code null}.
      */
-    public static Error validateRegularFileExistenceAndPermissions(String label, final String filePath, final String parentDirPath,
-                                                                   final String permissionsToCheck, final boolean setPermissions, final boolean setMissingPermissionsOnly,
-                                                                   final boolean ignoreErrorsIfPathIsUnderParentDirPath) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "regular file path", "validateRegularFileExistenceAndPermissions");
+    @JvmStatic
+    fun validateRegularFileExistenceAndPermissions(
+        label: String?,
+        filePath: String?,
+        parentDirPath: String?,
+        permissionsToCheck: String?,
+        setPermissions: Boolean,
+        setMissingPermissionsOnly: Boolean,
+        ignoreErrorsIfPathIsUnderParentDirPath: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(
+                "${lbl}regular file path",
+                "validateRegularFileExistenceAndPermissions"
+            )
+        }
 
         try {
-            FileType fileType = getFileType(filePath, false);
+            val fileType = getFileType(filePath, false)
 
             // If file exists but not a regular file
             if (fileType != FileType.NO_EXIST && fileType != FileType.REGULAR) {
-                return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError(label + "file", filePath).setLabel(label + "file");
+                return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError("${lbl}file", filePath)
+                    .setLabel("${lbl}file")
             }
 
-            boolean isPathUnderParentDirPath = false;
+            var isPathUnderParentDirPath = false
             if (parentDirPath != null) {
                 // The path can only be under parent directory path
-                isPathUnderParentDirPath = isPathInDirPath(filePath, parentDirPath, true);
+                isPathUnderParentDirPath = isPathInDirPath(filePath, parentDirPath, true)
             }
 
             // If setPermissions is enabled and path is a regular file
             if (setPermissions && permissionsToCheck != null && fileType == FileType.REGULAR) {
                 // If there is not parentDirPath restriction or path is under parentDirPath
                 if (parentDirPath == null || (isPathUnderParentDirPath && getFileType(parentDirPath, false) == FileType.DIRECTORY)) {
-                    if (setMissingPermissionsOnly)
-                        setMissingFilePermissions(label + "file", filePath, permissionsToCheck);
-                    else
-                        setFilePermissions(label + "file", filePath, permissionsToCheck);
+                    if (setMissingPermissionsOnly) {
+                        setMissingFilePermissions("${lbl}file", filePath, permissionsToCheck)
+                    } else {
+                        setFilePermissions("${lbl}file", filePath, permissionsToCheck)
+                    }
                 }
             }
 
             // If path is not a regular file
             // Regular files cannot be automatically created so we do not ignore if missing
             if (fileType != FileType.REGULAR) {
-                label += "regular file";
-                return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+                val finalLbl = "${lbl}regular file"
+                return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
             }
 
             // If there is not parentDirPath restriction or path is not under parentDirPath or
@@ -446,15 +465,15 @@ public class FileUtils {
             if (parentDirPath == null || !isPathUnderParentDirPath || !ignoreErrorsIfPathIsUnderParentDirPath) {
                 if (permissionsToCheck != null) {
                     // Check if permissions are missing
-                    return checkMissingFilePermissions(label + "regular", filePath, permissionsToCheck, false);
+                    return checkMissingFilePermissions("${lbl}regular", filePath, permissionsToCheck, false)
                 }
             }
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_VALIDATE_FILE_EXISTENCE_AND_PERMISSIONS_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_VALIDATE_FILE_EXISTENCE_AND_PERMISSIONS_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}file", filePath, e.message)
         }
 
-        return null;
-
+        return null
     }
 
     /**
@@ -484,25 +503,40 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a directory file, failed to create it,
      * or validating permissions failed, otherwise {@code null}.
      */
-    public static Error validateDirectoryFileExistenceAndPermissions(String label, final String filePath, final String parentDirPath, final boolean createDirectoryIfMissing,
-                                                                     final String permissionsToCheck, final boolean setPermissions, final boolean setMissingPermissionsOnly,
-                                                                     final boolean ignoreErrorsIfPathIsInParentDirPath, final boolean ignoreIfNotExecutable) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "directory file path", "validateDirectoryExistenceAndPermissions");
+    @JvmStatic
+    fun validateDirectoryFileExistenceAndPermissions(
+        label: String?,
+        filePath: String?,
+        parentDirPath: String?,
+        createDirectoryIfMissing: Boolean,
+        permissionsToCheck: String?,
+        setPermissions: Boolean,
+        setMissingPermissionsOnly: Boolean,
+        ignoreErrorsIfPathIsInParentDirPath: Boolean,
+        ignoreIfNotExecutable: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(
+                "${lbl}directory file path",
+                "validateDirectoryExistenceAndPermissions"
+            )
+        }
 
         try {
-            File file = new File(filePath);
-            FileType fileType = getFileType(filePath, false);
+            val file = File(filePath)
+            var fileType = getFileType(filePath, false)
 
             // If file exists but not a directory file
             if (fileType != FileType.NO_EXIST && fileType != FileType.DIRECTORY) {
-                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError(label + "directory", filePath).setLabel(label + "directory");
+                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError("${lbl}directory", filePath)
+                    .setLabel("${lbl}directory")
             }
 
-            boolean isPathInParentDirPath = false;
+            var isPathInParentDirPath = false
             if (parentDirPath != null) {
                 // The path can be equal to parent directory path or under it
-                isPathInParentDirPath = isPathInDirPath(filePath, parentDirPath, false);
+                isPathInParentDirPath = isPathInDirPath(filePath, parentDirPath, false)
             }
 
             if (createDirectoryIfMissing || setPermissions) {
@@ -510,21 +544,23 @@ public class FileUtils {
                 if (parentDirPath == null || (isPathInParentDirPath && getFileType(parentDirPath, false) == FileType.DIRECTORY)) {
                     // If createDirectoryIfMissing is enabled and no file exists at path, then create directory
                     if (createDirectoryIfMissing && fileType == FileType.NO_EXIST) {
-                        Logger.logVerbose(LOG_TAG, "Creating " + label + "directory file at path \"" + filePath + "\"");
+                        Logger.logVerbose(LOG_TAG, "Creating ${lbl}directory file at path \"$filePath\"")
                         // Create directory and update fileType if successful, otherwise return with error
                         // It "might" be possible that mkdirs returns false even though directory was created
-                        boolean result = file.mkdirs();
-                        fileType = getFileType(filePath, false);
-                        if (!result && fileType != FileType.DIRECTORY)
-                            return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED.getError(label + "directory file", filePath);
+                        val result = file.mkdirs()
+                        fileType = getFileType(filePath, false)
+                        if (!result && fileType != FileType.DIRECTORY) {
+                            return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED.getError("${lbl}directory file", filePath)
+                        }
                     }
 
                     // If setPermissions is enabled and path is a directory
                     if (setPermissions && permissionsToCheck != null && fileType == FileType.DIRECTORY) {
-                        if (setMissingPermissionsOnly)
-                            setMissingFilePermissions(label + "directory", filePath, permissionsToCheck);
-                        else
-                            setFilePermissions(label + "directory", filePath, permissionsToCheck);
+                        if (setMissingPermissionsOnly) {
+                            setMissingFilePermissions("${lbl}directory", filePath, permissionsToCheck)
+                        } else {
+                            setFilePermissions("${lbl}directory", filePath, permissionsToCheck)
+                        }
                     }
                 }
             }
@@ -535,23 +571,22 @@ public class FileUtils {
                 // If path is not a directory
                 // Directories can be automatically created so we can ignore if missing with above check
                 if (fileType != FileType.DIRECTORY) {
-                    label += "directory";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+                    val finalLbl = "${lbl}directory"
+                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
                 }
 
                 if (permissionsToCheck != null) {
                     // Check if permissions are missing
-                    return checkMissingFilePermissions(label + "directory", filePath, permissionsToCheck, ignoreIfNotExecutable);
+                    return checkMissingFilePermissions("${lbl}directory", filePath, permissionsToCheck, ignoreIfNotExecutable)
                 }
             }
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_VALIDATE_DIRECTORY_EXISTENCE_AND_PERMISSIONS_FAILED_WITH_EXCEPTION.getError(e, label + "directory file", filePath, e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_VALIDATE_DIRECTORY_EXISTENCE_AND_PERMISSIONS_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}directory file", filePath, e.message)
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Create a regular file at path.
@@ -563,8 +598,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a regular file or failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createRegularFile(final String filePath) {
-        return createRegularFile(null, filePath);
+    @JvmStatic
+    fun createRegularFile(filePath: String?): Error? {
+        return createRegularFile(null, filePath)
     }
 
     /**
@@ -578,9 +614,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a regular file or failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createRegularFile(final String label, final String filePath) {
-        return createRegularFile(label, filePath,
-            null, false, false);
+    @JvmStatic
+    fun createRegularFile(label: String?, filePath: String?): Error? {
+        return createRegularFile(label, filePath, null, false, false)
     }
 
     /**
@@ -599,47 +635,52 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a regular file, failed to create it,
      * or validating permissions failed, otherwise {@code null}.
      */
-    public static Error createRegularFile(String label, final String filePath,
-                                          final String permissionsToCheck, final boolean setPermissions, final boolean setMissingPermissionsOnly) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "createRegularFile");
+    @JvmStatic
+    fun createRegularFile(
+        label: String?,
+        filePath: String?,
+        permissionsToCheck: String?,
+        setPermissions: Boolean,
+        setMissingPermissionsOnly: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "createRegularFile")
+        }
 
-        Error error;
-
-        File file = new File(filePath);
-        FileType fileType = getFileType(filePath, false);
+        val file = File(filePath)
+        val fileType = getFileType(filePath, false)
 
         // If file exists but not a regular file
         if (fileType != FileType.NO_EXIST && fileType != FileType.REGULAR) {
-            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError(label + "file", filePath).setLabel(label + "file");
+            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError("${lbl}file", filePath).setLabel("${lbl}file")
         }
 
         // If regular file already exists
         if (fileType == FileType.REGULAR) {
-            return null;
+            return null
         }
 
         // Create the file parent directory
-        error = createParentDirectoryFile(label + "regular file parent", filePath);
-        if (error != null)
-            return error;
+        val error = createParentDirectoryFile("${lbl}regular file parent", filePath)
+        if (error != null) return error
 
         try {
-            Logger.logVerbose(LOG_TAG, "Creating " + label + "regular file at path \"" + filePath + "\"");
-
-            if (!file.createNewFile())
-                return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED.getError(label + "regular file", filePath);
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "regular file", filePath, e.getMessage());
+            Logger.logVerbose(LOG_TAG, "Creating ${lbl}regular file at path \"$filePath\"")
+            if (!file.createNewFile()) {
+                return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED.getError("${lbl}regular file", filePath)
+            }
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_CREATING_FILE_FAILED_WITH_EXCEPTION.getError(e, "${lbl}regular file", filePath, e.message)
         }
 
-        return validateRegularFileExistenceAndPermissions(label, filePath,
+        return validateRegularFileExistenceAndPermissions(
+            label, filePath,
             null,
             permissionsToCheck, setPermissions, setMissingPermissionsOnly,
-            false);
+            false
+        )
     }
-
-
 
     /**
      * Create parent directory of file at path.
@@ -652,17 +693,21 @@ public class FileUtils {
      * @return Returns the {@code error} if parent path is not a directory file or failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createParentDirectoryFile(final String label, final String filePath) {
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "createParentDirectoryFile");
+    @JvmStatic
+    fun createParentDirectoryFile(label: String?, filePath: String?): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "createParentDirectoryFile")
+        }
 
-        File file = new File(filePath);
-        String fileParentPath = file.getParent();
+        val file = File(filePath)
+        val fileParentPath = file.parent
 
-        if (fileParentPath != null)
-            return createDirectoryFile(label, fileParentPath,
-                null, false, false);
-        else
-            return null;
+        return if (fileParentPath != null) {
+            createDirectoryFile(label, fileParentPath, null, false, false)
+        } else {
+            null
+        }
     }
 
     /**
@@ -675,8 +720,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a directory file or failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createDirectoryFile(final String filePath) {
-        return createDirectoryFile(null, filePath);
+    @JvmStatic
+    fun createDirectoryFile(filePath: String?): Error? {
+        return createDirectoryFile(null, filePath)
     }
 
     /**
@@ -690,9 +736,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a directory file or failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createDirectoryFile(final String label, final String filePath) {
-        return createDirectoryFile(label, filePath,
-            null, false, false);
+    @JvmStatic
+    fun createDirectoryFile(label: String?, filePath: String?): Error? {
+        return createDirectoryFile(label, filePath, null, false, false)
     }
 
     /**
@@ -711,15 +757,21 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a directory file, failed to create it,
      * or validating permissions failed, otherwise {@code null}.
      */
-    public static Error createDirectoryFile(final String label, final String filePath,
-                                            final String permissionsToCheck, final boolean setPermissions, final boolean setMissingPermissionsOnly) {
-        return validateDirectoryFileExistenceAndPermissions(label, filePath,
+    @JvmStatic
+    fun createDirectoryFile(
+        label: String?,
+        filePath: String?,
+        permissionsToCheck: String?,
+        setPermissions: Boolean,
+        setMissingPermissionsOnly: Boolean
+    ): Error? {
+        return validateDirectoryFileExistenceAndPermissions(
+            label, filePath,
             null, true,
             permissionsToCheck, setPermissions, setMissingPermissionsOnly,
-            false, false);
+            false, false
+        )
     }
-
-
 
     /**
      * Create a symlink file at path.
@@ -735,9 +787,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a symlink file, failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createSymlinkFile(final String targetFilePath, final String destFilePath) {
-        return createSymlinkFile(null, targetFilePath, destFilePath,
-            true, true, true);
+    @JvmStatic
+    fun createSymlinkFile(targetFilePath: String?, destFilePath: String?): Error? {
+        return createSymlinkFile(null, targetFilePath, destFilePath, true, true, true)
     }
 
     /**
@@ -755,9 +807,9 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a symlink file, failed to create it,
      * otherwise {@code null}.
      */
-    public static Error createSymlinkFile(String label, final String targetFilePath, final String destFilePath) {
-        return createSymlinkFile(label, targetFilePath, destFilePath,
-            true, true, true);
+    @JvmStatic
+    fun createSymlinkFile(label: String?, targetFilePath: String?, destFilePath: String?): Error? {
+        return createSymlinkFile(label, targetFilePath, destFilePath, true, true, true)
     }
 
     /**
@@ -776,34 +828,44 @@ public class FileUtils {
      * @return Returns the {@code error} if path is not a symlink file, failed to create it,
      * or validating permissions failed, otherwise {@code null}.
      */
-    public static Error createSymlinkFile(String label, final String targetFilePath, final String destFilePath,
-                                          final boolean allowDangling, final boolean overwrite, final boolean overwriteOnlyIfDestIsASymlink) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (targetFilePath == null || targetFilePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "target file path", "createSymlinkFile");
-        if (destFilePath == null || destFilePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "destination file path", "createSymlinkFile");
-
-        Error error;
+    @JvmStatic
+    fun createSymlinkFile(
+        label: String?,
+        targetFilePath: String?,
+        destFilePath: String?,
+        allowDangling: Boolean,
+        overwrite: Boolean,
+        overwriteOnlyIfDestIsASymlink: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (targetFilePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}target file path", "createSymlinkFile")
+        }
+        if (destFilePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}destination file path", "createSymlinkFile")
+        }
 
         try {
-            File destFile = new File(destFilePath);
+            val destFile = File(destFilePath)
 
-            String targetFileAbsolutePath = targetFilePath;
+            var targetFileAbsolutePath = targetFilePath
             // If target path is relative instead of absolute
             if (!targetFilePath.startsWith("/")) {
-                String destFileParentPath = destFile.getParent();
-                if (destFileParentPath != null)
-                    targetFileAbsolutePath = destFileParentPath + "/" +  targetFilePath;
+                val destFileParentPath = destFile.parent
+                if (destFileParentPath != null) {
+                    targetFileAbsolutePath = "$destFileParentPath/$targetFilePath"
+                }
             }
 
-            FileType targetFileType = getFileType(targetFileAbsolutePath, false);
-            FileType destFileType = getFileType(destFilePath, false);
+            val targetFileType = getFileType(targetFileAbsolutePath, false)
+            val destFileType = getFileType(destFilePath, false)
 
             // If target file does not exist
             if (targetFileType == FileType.NO_EXIST) {
                 // If dangling symlink should not be allowed, then return with error
                 if (!allowDangling) {
-                    label += "symlink target file";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, targetFileAbsolutePath).setLabel(label);
+                    val finalLbl = "${lbl}symlink target file"
+                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, targetFileAbsolutePath).setLabel(finalLbl)
                 }
             }
 
@@ -811,35 +873,38 @@ public class FileUtils {
             if (destFileType != FileType.NO_EXIST) {
                 // If destination must not be overwritten
                 if (!overwrite) {
-                    return null;
+                    return null
                 }
 
                 // If overwriteOnlyIfDestIsASymlink is enabled but destination file is not a symlink
-                if (overwriteOnlyIfDestIsASymlink && destFileType != FileType.SYMLINK)
-                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_NON_SYMLINK_FILE_TYPE.getError(label + " file", destFilePath, targetFilePath, destFileType.getName());
+                if (overwriteOnlyIfDestIsASymlink && destFileType != FileType.SYMLINK) {
+                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_NON_SYMLINK_FILE_TYPE.getError(
+                        "${lbl}file",
+                        destFilePath,
+                        targetFilePath,
+                        destFileType.getName()
+                    )
+                }
 
                 // Delete the destination file
-                error = deleteFile(label + "symlink destination", destFilePath, true);
-                if (error != null)
-                    return error;
+                val error = deleteFile("${lbl}symlink destination", destFilePath, true)
+                if (error != null) return error
             } else {
                 // Create the destination file parent directory
-                error = createParentDirectoryFile(label + "symlink destination file parent", destFilePath);
-                if (error != null)
-                    return error;
+                val error = createParentDirectoryFile("${lbl}symlink destination file parent", destFilePath)
+                if (error != null) return error
             }
 
             // create a symlink at destFilePath to targetFilePath
-            Logger.logVerbose(LOG_TAG, "Creating " + label + "symlink file at path \"" + destFilePath + "\" to \"" + targetFilePath + "\"");
-            Os.symlink(targetFilePath, destFilePath);
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_CREATING_SYMLINK_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "symlink file", destFilePath, targetFilePath, e.getMessage());
+            Logger.logVerbose(LOG_TAG, "Creating ${lbl}symlink file at path \"$destFilePath\" to \"$targetFilePath\"")
+            Os.symlink(targetFilePath, destFilePath)
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_CREATING_SYMLINK_FILE_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}symlink file", destFilePath, targetFilePath, e.message)
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Copy a regular file from {@code sourceFilePath} to {@code destFilePath}.
@@ -857,10 +922,13 @@ public class FileUtils {
      *                              error if source file to copied doesn't exist.
      * @return Returns the {@code error} if copy was not successful, otherwise {@code null}.
      */
-    public static Error copyRegularFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun copyRegularFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             false, ignoreNonExistentSrcFile, FileType.REGULAR.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -879,10 +947,13 @@ public class FileUtils {
      *                              error if source file to moved doesn't exist.
      * @return Returns the {@code error} if move was not successful, otherwise {@code null}.
      */
-    public static Error moveRegularFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun moveRegularFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             true, ignoreNonExistentSrcFile, FileType.REGULAR.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -901,10 +972,13 @@ public class FileUtils {
      *                              error if source file to copied doesn't exist.
      * @return Returns the {@code error} if copy was not successful, otherwise {@code null}.
      */
-    public static Error copyDirectoryFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun copyDirectoryFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             false, ignoreNonExistentSrcFile, FileType.DIRECTORY.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -923,10 +997,13 @@ public class FileUtils {
      *                              error if source file to moved doesn't exist.
      * @return Returns the {@code error} if move was not successful, otherwise {@code null}.
      */
-    public static Error moveDirectoryFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun moveDirectoryFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             true, ignoreNonExistentSrcFile, FileType.DIRECTORY.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -945,10 +1022,13 @@ public class FileUtils {
      *                              error if source file to copied doesn't exist.
      * @return Returns the {@code error} if copy was not successful, otherwise {@code null}.
      */
-    public static Error copySymlinkFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun copySymlinkFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             false, ignoreNonExistentSrcFile, FileType.SYMLINK.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -967,10 +1047,13 @@ public class FileUtils {
      *                              error if source file to moved doesn't exist.
      * @return Returns the {@code error} if move was not successful, otherwise {@code null}.
      */
-    public static Error moveSymlinkFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun moveSymlinkFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             true, ignoreNonExistentSrcFile, FileType.SYMLINK.getValue(),
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -989,10 +1072,13 @@ public class FileUtils {
      *                              error if source file to copied doesn't exist.
      * @return Returns the {@code error} if copy was not successful, otherwise {@code null}.
      */
-    public static Error copyFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun copyFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             false, ignoreNonExistentSrcFile, FileTypes.FILE_TYPE_NORMAL_FLAGS,
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -1011,10 +1097,13 @@ public class FileUtils {
      *                              error if source file to moved doesn't exist.
      * @return Returns the {@code error} if move was not successful, otherwise {@code null}.
      */
-    public static Error moveFile(final String label, final String srcFilePath, final String destFilePath, final boolean ignoreNonExistentSrcFile) {
-        return copyOrMoveFile(label, srcFilePath, destFilePath,
+    @JvmStatic
+    fun moveFile(label: String?, srcFilePath: String?, destFilePath: String?, ignoreNonExistentSrcFile: Boolean): Error? {
+        return copyOrMoveFile(
+            label, srcFilePath, destFilePath,
             true, ignoreNonExistentSrcFile, FileTypes.FILE_TYPE_NORMAL_FLAGS,
-            true, true);
+            true, true
+        )
     }
 
     /**
@@ -1048,119 +1137,154 @@ public class FileUtils {
      *                                          type as the source file.
      * @return Returns the {@code error} if copy or move was not successful, otherwise {@code null}.
      */
-    public static Error copyOrMoveFile(String label, final String srcFilePath, final String destFilePath,
-                                       final boolean moveFile, final boolean ignoreNonExistentSrcFile, int allowedFileTypeFlags,
-                                       final boolean overwrite, final boolean overwriteOnlyIfDestSameFileTypeAsSrc) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (srcFilePath == null || srcFilePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "source file path", "copyOrMoveFile");
-        if (destFilePath == null || destFilePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "destination file path", "copyOrMoveFile");
+    @JvmStatic
+    fun copyOrMoveFile(
+        label: String?,
+        srcFilePath: String?,
+        destFilePath: String?,
+        moveFile: Boolean,
+        ignoreNonExistentSrcFile: Boolean,
+        allowedFileTypeFlags: Int,
+        overwrite: Boolean,
+        overwriteOnlyIfDestSameFileTypeAsSrc: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (srcFilePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}source file path", "copyOrMoveFile")
+        }
+        if (destFilePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}destination file path", "copyOrMoveFile")
+        }
 
-        String mode = (moveFile ? "Moving" : "Copying");
-        String modePast = (moveFile ? "moved" : "copied");
-
-        Error error;
+        val mode = if (moveFile) "Moving" else "Copying"
+        val modePast = if (moveFile) "moved" else "copied"
 
         try {
-            Logger.logVerbose(LOG_TAG, mode + " " + label + "source file from \"" + srcFilePath + "\" to destination \"" + destFilePath + "\"");
+            Logger.logVerbose(LOG_TAG, "$mode ${lbl}source file from \"$srcFilePath\" to destination \"$destFilePath\"")
 
-            File srcFile = new File(srcFilePath);
-            File destFile = new File(destFilePath);
+            val srcFile = File(srcFilePath)
+            val destFile = File(destFilePath)
 
-            FileType srcFileType = getFileType(srcFilePath, false);
-            FileType destFileType = getFileType(destFilePath, false);
+            val srcFileType = getFileType(srcFilePath, false)
+            val destFileType = getFileType(destFilePath, false)
 
-            String srcFileCanonicalPath = srcFile.getCanonicalPath();
-            String destFileCanonicalPath = destFile.getCanonicalPath();
+            val srcFileCanonicalPath = srcFile.canonicalPath
+            val destFileCanonicalPath = destFile.canonicalPath
 
             // If source file does not exist
             if (srcFileType == FileType.NO_EXIST) {
                 // If copy or move is to be ignored if source file is not found
-                if (ignoreNonExistentSrcFile)
-                    return null;
-                    // Else return with error
-                else {
-                    label += "source file";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, srcFilePath).setLabel(label);
+                return if (ignoreNonExistentSrcFile) {
+                    null
+                } else {
+                    val finalLbl = "${lbl}source file"
+                    FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, srcFilePath).setLabel(finalLbl)
                 }
             }
 
             // If the file type of the source file does not exist in the allowedFileTypeFlags, then return with error
-            if ((allowedFileTypeFlags & srcFileType.getValue()) <= 0)
-                return FileUtilsErrno.ERRNO_FILE_NOT_AN_ALLOWED_FILE_TYPE.getError(label + "source file meant to be " + modePast, srcFilePath, FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags));
+            if ((allowedFileTypeFlags and srcFileType.getValue()) <= 0) {
+                return FileUtilsErrno.ERRNO_FILE_NOT_AN_ALLOWED_FILE_TYPE.getError(
+                    "${lbl}source file meant to be $modePast",
+                    srcFilePath,
+                    FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags)
+                )
+            }
 
             // If source and destination file path are the same
-            if (srcFileCanonicalPath.equals(destFileCanonicalPath))
-                return FileUtilsErrno.ERRNO_COPYING_OR_MOVING_FILE_TO_SAME_PATH.getError(mode + " " + label + "source file", srcFilePath, destFilePath);
+            if (srcFileCanonicalPath == destFileCanonicalPath) {
+                return FileUtilsErrno.ERRNO_COPYING_OR_MOVING_FILE_TO_SAME_PATH.getError(
+                    "$mode ${lbl}source file",
+                    srcFilePath,
+                    destFilePath
+                )
+            }
 
             // If destination exists
             if (destFileType != FileType.NO_EXIST) {
                 // If destination must not be overwritten
                 if (!overwrite) {
-                    return null;
+                    return null
                 }
 
                 // If overwriteOnlyIfDestSameFileTypeAsSrc is enabled but destination file does not match source file type
-                if (overwriteOnlyIfDestSameFileTypeAsSrc && destFileType != srcFileType)
-                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_DIFFERENT_FILE_TYPE.getError(label + "source file", mode.toLowerCase(), srcFilePath, destFilePath, destFileType.getName(), srcFileType.getName());
+                if (overwriteOnlyIfDestSameFileTypeAsSrc && destFileType != srcFileType) {
+                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_DIFFERENT_FILE_TYPE.getError(
+                        "${lbl}source file",
+                        mode.lowercase(),
+                        srcFilePath,
+                        destFilePath,
+                        destFileType.getName(),
+                        srcFileType.getName()
+                    )
+                }
 
                 // Delete the destination file
-                error = deleteFile(label + "destination", destFilePath, true);
-                if (error != null)
-                    return error;
+                val error = deleteFile("${lbl}destination", destFilePath, true)
+                if (error != null) return error
             }
 
-
             // Copy or move source file to dest
-            boolean copyFile = !moveFile;
+            var copyFile = !moveFile
 
             // If moveFile is true
             if (moveFile) {
                 // We first try to rename source file to destination file to save a copy operation in case both source and destination are on the same filesystem
-                Logger.logVerbose(LOG_TAG, "Attempting to rename source to destination.");
+                Logger.logVerbose(LOG_TAG, "Attempting to rename source to destination.")
 
-                // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:libcore/ojluni/src/main/java/java/io/UnixFileSystem.java;l=358
-                // https://cs.android.com/android/platform/superproject/+/android-11.0.0_r3:libcore/luni/src/main/java/android/system/Os.java;l=512
-                // Uses File.getPath() to get the path of source and destination and not the canonical path
                 if (!srcFile.renameTo(destFile)) {
                     // If destination directory is a subdirectory of the source directory
                     // Copying is still allowed by copyDirectory() by excluding destination directory files
-                    if (srcFileType == FileType.DIRECTORY && destFileCanonicalPath.startsWith(srcFileCanonicalPath + File.separator))
-                        return FileUtilsErrno.ERRNO_CANNOT_MOVE_DIRECTORY_TO_SUB_DIRECTORY_OF_ITSELF.getError(label + "source directory", srcFilePath, destFilePath);
+                    if (srcFileType == FileType.DIRECTORY && destFileCanonicalPath.startsWith(srcFileCanonicalPath + File.separator)) {
+                        return FileUtilsErrno.ERRNO_CANNOT_MOVE_DIRECTORY_TO_SUB_DIRECTORY_OF_ITSELF.getError(
+                            "${lbl}source directory",
+                            srcFilePath,
+                            destFilePath
+                        )
+                    }
 
                     // If rename failed, then we copy
-                    Logger.logVerbose(LOG_TAG, "Renaming " + label + "source file to destination failed, attempting to copy.");
-                    copyFile = true;
+                    Logger.logVerbose(LOG_TAG, "Renaming ${lbl}source file to destination failed, attempting to copy.")
+                    copyFile = true
                 }
             }
 
             // If moveFile is false or renameTo failed while moving
             if (copyFile) {
-                Logger.logVerbose(LOG_TAG, "Attempting to copy source to destination.");
+                Logger.logVerbose(LOG_TAG, "Attempting to copy source to destination.")
 
                 // Create the dest file parent directory
-                error = createParentDirectoryFile(label + "dest file parent", destFilePath);
-                if (error != null)
-                    return error;
+                val error = createParentDirectoryFile("${lbl}dest file parent", destFilePath)
+                if (error != null) return error
 
                 if (srcFileType == FileType.DIRECTORY) {
                     // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
-                    org.apache.commons.io.FileUtils.copyDirectory(srcFile, destFile, true);
+                    org.apache.commons.io.FileUtils.copyDirectory(srcFile, destFile, true)
                 } else if (srcFileType == FileType.SYMLINK) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        java.nio.file.Files.copy(srcFile.toPath(), destFile.toPath(), LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING);
+                        java.nio.file.Files.copy(
+                            srcFile.toPath(),
+                            destFile.toPath(),
+                            LinkOption.NOFOLLOW_LINKS,
+                            StandardCopyOption.REPLACE_EXISTING
+                        )
                     } else {
                         // read the target for the source file and create a symlink at dest
                         // source file metadata will be lost
-                        error = createSymlinkFile(label + "dest", Os.readlink(srcFilePath), destFilePath);
-                        if (error != null)
-                            return error;
+                        val errorSymlink = createSymlinkFile("${lbl}dest", Os.readlink(srcFilePath), destFilePath)
+                        if (errorSymlink != null) return errorSymlink
                     }
                 } else {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        java.nio.file.Files.copy(srcFile.toPath(), destFile.toPath(), LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING);
+                        java.nio.file.Files.copy(
+                            srcFile.toPath(),
+                            destFile.toPath(),
+                            LinkOption.NOFOLLOW_LINKS,
+                            StandardCopyOption.REPLACE_EXISTING
+                        )
                     } else {
                         // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
-                        org.apache.commons.io.FileUtils.copyFile(srcFile, destFile, true);
+                        org.apache.commons.io.FileUtils.copyFile(srcFile, destFile, true)
                     }
                 }
             }
@@ -1168,21 +1292,18 @@ public class FileUtils {
             // If source file had to be moved
             if (moveFile) {
                 // Delete the source file since copying would have succeeded
-                error = deleteFile(label + "source", srcFilePath, true);
-                if (error != null)
-                    return error;
+                val error = deleteFile("${lbl}source", srcFilePath, true)
+                if (error != null) return error
             }
 
-            Logger.logVerbose(LOG_TAG, mode + " successful.");
-        }
-        catch (Exception e) {
-            return FileUtilsErrno.ERRNO_COPYING_OR_MOVING_FILE_FAILED_WITH_EXCEPTION.getError(e, mode + " " + label + "file", srcFilePath, destFilePath, e.getMessage());
+            Logger.logVerbose(LOG_TAG, "$mode successful.")
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_COPYING_OR_MOVING_FILE_FAILED_WITH_EXCEPTION
+                .getError(e, "$mode ${lbl}file", srcFilePath, destFilePath, e.message)
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Delete regular file at path.
@@ -1195,8 +1316,9 @@ public class FileUtils {
      *                              error if file to deleted doesn't exist.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteRegularFile(String label, final String filePath, final boolean ignoreNonExistentFile) {
-        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.REGULAR.getValue());
+    @JvmStatic
+    fun deleteRegularFile(label: String?, filePath: String?, ignoreNonExistentFile: Boolean): Error? {
+        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.REGULAR.getValue())
     }
 
     /**
@@ -1210,8 +1332,9 @@ public class FileUtils {
      *                              error if file to deleted doesn't exist.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteDirectoryFile(String label, final String filePath, final boolean ignoreNonExistentFile) {
-        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.DIRECTORY.getValue());
+    @JvmStatic
+    fun deleteDirectoryFile(label: String?, filePath: String?, ignoreNonExistentFile: Boolean): Error? {
+        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.DIRECTORY.getValue())
     }
 
     /**
@@ -1225,8 +1348,9 @@ public class FileUtils {
      *                              error if file to deleted doesn't exist.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteSymlinkFile(String label, final String filePath, final boolean ignoreNonExistentFile) {
-        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.SYMLINK.getValue());
+    @JvmStatic
+    fun deleteSymlinkFile(label: String?, filePath: String?, ignoreNonExistentFile: Boolean): Error? {
+        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.SYMLINK.getValue())
     }
 
     /**
@@ -1240,8 +1364,9 @@ public class FileUtils {
      *                              error if file to deleted doesn't exist.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteSocketFile(String label, final String filePath, final boolean ignoreNonExistentFile) {
-        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.SOCKET.getValue());
+    @JvmStatic
+    fun deleteSocketFile(label: String?, filePath: String?, ignoreNonExistentFile: Boolean): Error? {
+        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileType.SOCKET.getValue())
     }
 
     /**
@@ -1255,8 +1380,9 @@ public class FileUtils {
      *                              error if file to deleted doesn't exist.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteFile(String label, final String filePath, final boolean ignoreNonExistentFile) {
-        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileTypes.FILE_TYPE_NORMAL_FLAGS);
+    @JvmStatic
+    fun deleteFile(label: String?, filePath: String?, ignoreNonExistentFile: Boolean): Error? {
+        return deleteFile(label, filePath, ignoreNonExistentFile, false, FileTypes.FILE_TYPE_NORMAL_FLAGS)
     }
 
     /**
@@ -1280,41 +1406,58 @@ public class FileUtils {
      *                             {@link FileTypes#FILE_TYPE_ANY_FLAGS} to allow deletion of any file type.
      * @return Returns the {@code error} if deletion was not successful, otherwise {@code null}.
      */
-    public static Error deleteFile(String label, final String filePath, final boolean ignoreNonExistentFile, final boolean ignoreWrongFileType, int allowedFileTypeFlags) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "deleteFile");
+    @JvmStatic
+    fun deleteFile(
+        label: String?,
+        filePath: String?,
+        ignoreNonExistentFile: Boolean,
+        ignoreWrongFileType: Boolean,
+        allowedFileTypeFlags: Int
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "deleteFile")
+        }
 
         try {
-            File file = new File(filePath);
-            FileType fileType = getFileType(filePath, false);
+            val file = File(filePath)
+            var fileType = getFileType(filePath, false)
 
-            Logger.logVerbose(LOG_TAG, "Processing delete of " + label + "file at path \"" + filePath + "\" of type \"" + fileType.getName() + "\"");
+            Logger.logVerbose(LOG_TAG, "Processing delete of ${lbl}file at path \"$filePath\" of type \"${fileType.getName()}\"")
 
             // If file does not exist
             if (fileType == FileType.NO_EXIST) {
                 // If delete is to be ignored if file does not exist
-                if (ignoreNonExistentFile)
-                    return null;
-                    // Else return with error
-                else {
-                    label += "file meant to be deleted";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+                return if (ignoreNonExistentFile) {
+                    null
+                } else {
+                    val finalLbl = "${lbl}file meant to be deleted"
+                    FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
                 }
             }
 
             // If the file type of the file does not exist in the allowedFileTypeFlags
-            if ((allowedFileTypeFlags & fileType.getValue()) <= 0) {
+            if ((allowedFileTypeFlags and fileType.getValue()) <= 0) {
                 // If wrong file type is to be ignored
                 if (ignoreWrongFileType) {
-                    Logger.logVerbose(LOG_TAG, "Ignoring deletion of " + label + "file at path \"" + filePath + "\" of type \"" + fileType.getName() + "\" not matching allowed file types: " + FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags));
-                    return null;
+                    Logger.logVerbose(
+                        LOG_TAG,
+                        "Ignoring deletion of ${lbl}file at path \"$filePath\" of type \"${fileType.getName()}\" not matching allowed file types: " +
+                                FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags)
+                    )
+                    return null
                 }
 
                 // Else return with error
-                return FileUtilsErrno.ERRNO_FILE_NOT_AN_ALLOWED_FILE_TYPE.getError(label + "file meant to be deleted", filePath, fileType.getName(), FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags));
+                return FileUtilsErrno.ERRNO_FILE_NOT_AN_ALLOWED_FILE_TYPE.getError(
+                    "${lbl}file meant to be deleted",
+                    filePath,
+                    fileType.getName(),
+                    FileTypes.convertFileTypeFlagsToNamesString(allowedFileTypeFlags)
+                )
             }
 
-            Logger.logVerbose(LOG_TAG, "Deleting " + label + "file at path \"" + filePath + "\"");
+            Logger.logVerbose(LOG_TAG, "Deleting ${lbl}file at path \"$filePath\"")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 /*
@@ -1336,31 +1479,32 @@ public class FileUtils {
                  * https://github.com/google/guava/blob/v30.1.1/guava/src/com/google/common/io/MoreFiles.java#L775
                  */
                 //noinspection UnstableApiUsage
-                com.google.common.io.MoreFiles.deleteRecursively(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
+                com.google.common.io.MoreFiles.deleteRecursively(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE)
             } else {
                 if (fileType == FileType.DIRECTORY) {
                     // deleteDirectory() instead of forceDelete() gets the files list first instead of walking directory tree, so seems safer
                     // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
-                    org.apache.commons.io.FileUtils.deleteDirectory(file);
+                    org.apache.commons.io.FileUtils.deleteDirectory(file)
                 } else {
                     // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
-                    org.apache.commons.io.FileUtils.forceDelete(file);
+                    org.apache.commons.io.FileUtils.forceDelete(file)
                 }
             }
 
             // If file still exists after deleting it
-            fileType = getFileType(filePath, false);
-            if (fileType != FileType.NO_EXIST)
-                return FileUtilsErrno.ERRNO_FILE_STILL_EXISTS_AFTER_DELETING.getError(label + "file meant to be deleted", filePath);
-        }
-        catch (Exception e) {
-            return FileUtilsErrno.ERRNO_DELETING_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage());
+            fileType = getFileType(filePath, false)
+            if (fileType != FileType.NO_EXIST) {
+                return FileUtilsErrno.ERRNO_FILE_STILL_EXISTS_AFTER_DELETING.getError(
+                    "${lbl}file meant to be deleted",
+                    filePath
+                )
+            }
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_DELETING_FILE_FAILED_WITH_EXCEPTION.getError(e, "${lbl}file", filePath, e.message)
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Clear contents of directory at path without deleting the directory. If directory does not exist
@@ -1372,8 +1516,9 @@ public class FileUtils {
      * @param filePath The {@code path} for directory to clear.
      * @return Returns the {@code error} if clearing was not successful, otherwise {@code null}.
      */
-    public static Error clearDirectory(String filePath) {
-        return clearDirectory(null, filePath);
+    @JvmStatic
+    fun clearDirectory(filePath: String?): Error? {
+        return clearDirectory(null, filePath)
     }
 
     /**
@@ -1387,21 +1532,23 @@ public class FileUtils {
      * @param filePath The {@code path} for directory to clear.
      * @return Returns the {@code error} if clearing was not successful, otherwise {@code null}.
      */
-    public static Error clearDirectory(String label, final String filePath) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "clearDirectory");
-
-        Error error;
+    @JvmStatic
+    fun clearDirectory(label: String?, filePath: String?): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "clearDirectory")
+        }
 
         try {
-            Logger.logVerbose(LOG_TAG, "Clearing " + label + "directory at path \"" + filePath + "\"");
+            Logger.logVerbose(LOG_TAG, "Clearing ${lbl}directory at path \"$filePath\"")
 
-            File file = new File(filePath);
-            FileType fileType = getFileType(filePath, false);
+            val file = File(filePath)
+            val fileType = getFileType(filePath, false)
 
             // If file exists but not a directory file
             if (fileType != FileType.NO_EXIST && fileType != FileType.DIRECTORY) {
-                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError(label + "directory", filePath).setLabel(label + "directory");
+                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError("${lbl}directory", filePath)
+                    .setLabel("${lbl}directory")
             }
 
             // If directory exists, clear its contents
@@ -1410,23 +1557,21 @@ public class FileUtils {
                     /* If an exception is thrown, the exception message might not contain the full errors.
                      * Individual failures get added to suppressed throwables. */
                     //noinspection UnstableApiUsage
-                    com.google.common.io.MoreFiles.deleteDirectoryContents(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
+                    com.google.common.io.MoreFiles.deleteDirectoryContents(file.toPath(), RecursiveDeleteOption.ALLOW_INSECURE)
                 } else {
                     // Will give runtime exceptions on android < 8 due to missing classes like java.nio.file.Path if org.apache.commons.io version > 2.5
-                    org.apache.commons.io.FileUtils.cleanDirectory(new File(filePath));
+                    org.apache.commons.io.FileUtils.cleanDirectory(File(filePath))
                 }
+            } else {
+                // Else create it
+                val error = createDirectoryFile(label, filePath)
+                if (error != null) return error
             }
-            // Else create it
-            else {
-                error = createDirectoryFile(label, filePath);
-                if (error != null)
-                    return error;
-            }
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_CLEARING_DIRECTORY_FAILED_WITH_EXCEPTION.getError(e, label + "directory", filePath, e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_CLEARING_DIRECTORY_FAILED_WITH_EXCEPTION.getError(e, "${lbl}directory", filePath, e.message)
         }
 
-        return null;
+        return null
     }
 
     /**
@@ -1450,33 +1595,43 @@ public class FileUtils {
      *                             {@link FileTypes#FILE_TYPE_ANY_FLAGS} to allow deletion of any file type.
      * @return Returns the {@code error} if deleting was not successful, otherwise {@code null}.
      */
-    public static Error deleteFilesOlderThanXDays(String label, final String filePath, final IOFileFilter dirFilter, int days, final boolean ignoreNonExistentFile, int allowedFileTypeFlags) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "deleteFilesOlderThanXDays");
-        if (days < 0) return FunctionErrno.ERRNO_INVALID_PARAMETER.getError(label + "days", "deleteFilesOlderThanXDays", " It must be >= 0.");
-
-        Error error;
+    @JvmStatic
+    fun deleteFilesOlderThanXDays(
+        label: String?,
+        filePath: String?,
+        dirFilter: IOFileFilter?,
+        days: Int,
+        ignoreNonExistentFile: Boolean,
+        allowedFileTypeFlags: Int
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "deleteFilesOlderThanXDays")
+        }
+        if (days < 0) {
+            return FunctionErrno.ERRNO_INVALID_PARAMETER.getError("${lbl}days", "deleteFilesOlderThanXDays", " It must be >= 0.")
+        }
 
         try {
-            Logger.logVerbose(LOG_TAG, "Deleting files under " + label + "directory at path \"" + filePath + "\" older than " + days + " days");
+            Logger.logVerbose(LOG_TAG, "Deleting files under ${lbl}directory at path \"$filePath\" older than $days days")
 
-            File file = new File(filePath);
-            FileType fileType = getFileType(filePath, false);
+            val file = File(filePath)
+            val fileType = getFileType(filePath, false)
 
             // If file exists but not a directory file
             if (fileType != FileType.NO_EXIST && fileType != FileType.DIRECTORY) {
-                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError(label + "directory", filePath).setLabel(label + "directory");
+                return FileUtilsErrno.ERRNO_NON_DIRECTORY_FILE_FOUND.getError("${lbl}directory", filePath)
+                    .setLabel("${lbl}directory")
             }
 
             // If file does not exist
             if (fileType == FileType.NO_EXIST) {
                 // If delete is to be ignored if file does not exist
-                if (ignoreNonExistentFile)
-                    return null;
-                    // Else return with error
-                else {
-                    label += "directory under which files had to be deleted";
-                    return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+                return if (ignoreNonExistentFile) {
+                    null
+                } else {
+                    val finalLbl = "${lbl}directory under which files had to be deleted"
+                    FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
                 }
             }
 
@@ -1485,28 +1640,22 @@ public class FileUtils {
             // FIXME: Empty directories remain
 
             // If directory exists, delete its contents
-            Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.DATE, -(days));
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DATE, -days)
             // AgeFileFilter seems to apply to symlink destination timestamp instead of symlink file itself
-            Iterator<File> filesToDelete =
-                org.apache.commons.io.FileUtils.iterateFiles(file, new AgeFileFilter(calendar.getTime()), dirFilter);
+            val filesToDelete = org.apache.commons.io.FileUtils.iterateFiles(file, AgeFileFilter(calendar.time), dirFilter)
             while (filesToDelete.hasNext()) {
-                File subFile = filesToDelete.next();
-                error = deleteFile(label + " directory sub", subFile.getAbsolutePath(), true, true, allowedFileTypeFlags);
-                if (error != null)
-                    return error;
+                val subFile = filesToDelete.next()
+                val error = deleteFile("${lbl}directory sub", subFile.absolutePath, true, true, allowedFileTypeFlags)
+                if (error != null) return error
             }
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_DELETING_FILES_OLDER_THAN_X_DAYS_FAILED_WITH_EXCEPTION.getError(e, label + "directory", filePath, days, e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_DELETING_FILES_OLDER_THAN_X_DAYS_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}directory", filePath, days, e.message)
         }
 
-        return null;
-
+        return null
     }
-
-
-
-
 
     /**
      * Read a text {@link String} from file at path with a specific {@link Charset} into {@code dataString}.
@@ -1520,75 +1669,92 @@ public class FileUtils {
      *                              error if file to read doesn't exist.
      * @return Returns the {@code error} if reading was not successful, otherwise {@code null}.
      */
-    public static Error readTextFromFile(String label, final String filePath, Charset charset, @NonNull final StringBuilder dataStringBuilder, final boolean ignoreNonExistentFile) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "readStringFromFile");
+    @JvmStatic
+    fun readTextFromFile(
+        label: String?,
+        filePath: String?,
+        charset: Charset?,
+        dataStringBuilder: StringBuilder,
+        ignoreNonExistentFile: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "readStringFromFile")
+        }
 
-        Logger.logVerbose(LOG_TAG, "Reading text from " + label + "file at path \"" + filePath + "\"");
+        Logger.logVerbose(LOG_TAG, "Reading text from ${lbl}file at path \"$filePath\"")
 
-        Error error;
-
-        FileType fileType = getFileType(filePath, false);
+        val fileType = getFileType(filePath, false)
 
         // If file exists but not a regular file
         if (fileType != FileType.NO_EXIST && fileType != FileType.REGULAR) {
-            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError(label + "file", filePath).setLabel(label + "file");
+            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError("${lbl}file", filePath).setLabel("${lbl}file")
         }
 
         // If file does not exist
         if (fileType == FileType.NO_EXIST) {
             // If reading is to be ignored if file does not exist
-            if (ignoreNonExistentFile)
-                return null;
-                // Else return with error
-            else {
-                label += "file meant to be read";
-                return FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label);
+            return if (ignoreNonExistentFile) {
+                null
+            } else {
+                val finalLbl = "${lbl}file meant to be read"
+                FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl)
             }
         }
 
-        if (charset == null) charset = Charset.defaultCharset();
+        val cs = charset ?: Charset.defaultCharset()
 
         // Check if charset is supported
-        error = isCharsetSupported(charset);
-        if (error != null)
-            return error;
+        val error = isCharsetSupported(cs)
+        if (error != null) return error
 
-        FileInputStream fileInputStream = null;
-        BufferedReader bufferedReader = null;
+        var fileInputStream: FileInputStream? = null
+        var bufferedReader: BufferedReader? = null
         try {
             // Read text from file
-            fileInputStream = new FileInputStream(filePath);
-            bufferedReader = new BufferedReader(new InputStreamReader(fileInputStream, charset));
+            fileInputStream = FileInputStream(filePath)
+            bufferedReader = BufferedReader(InputStreamReader(fileInputStream, cs))
 
-            String receiveString;
-
-            boolean firstLine = true;
-            while ((receiveString = bufferedReader.readLine()) != null ) {
-                if (!firstLine) dataStringBuilder.append("\n"); else firstLine = false;
-                dataStringBuilder.append(receiveString);
+            var receiveString: String?
+            var firstLine = true
+            while (bufferedReader.readLine().also { receiveString = it } != null) {
+                if (!firstLine) {
+                    dataStringBuilder.append("\n")
+                } else {
+                    firstLine = false
+                }
+                dataStringBuilder.append(receiveString)
             }
 
-            Logger.logVerbose(LOG_TAG, Logger.getMultiLineLogStringEntry("String", DataUtils.getTruncatedCommandOutput(dataStringBuilder.toString(), Logger.LOGGER_ENTRY_MAX_SAFE_PAYLOAD, true, false, true), "-"));
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_READING_TEXT_FROM_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage());
+            Logger.logVerbose(
+                LOG_TAG,
+                Logger.getMultiLineLogStringEntry(
+                    "String",
+                    DataUtils.getTruncatedCommandOutput(
+                        dataStringBuilder.toString(),
+                        Logger.LOGGER_ENTRY_MAX_SAFE_PAYLOAD,
+                        true,
+                        false,
+                        true
+                    ),
+                    "-"
+                )
+            )
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_READING_TEXT_FROM_FILE_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}file", filePath, e.message)
         } finally {
-            closeCloseable(fileInputStream);
-            closeCloseable(bufferedReader);
+            closeCloseable(fileInputStream)
+            closeCloseable(bufferedReader)
         }
 
-        return null;
+        return null
     }
 
-    public static class ReadSerializableObjectResult {
-        public final Error error;
-        public final Serializable serializableObject;
-
-        ReadSerializableObjectResult(Error error, Serializable serializableObject) {
-            this.error = error;
-            this.serializableObject = serializableObject;
-        }
-    }
+    class ReadSerializableObjectResult(
+        @JvmField val error: Error?,
+        @JvmField val serializableObject: Serializable?
+    )
 
     /**
      * Read a {@link Serializable} object from file at path.
@@ -1600,52 +1766,68 @@ public class FileUtils {
      *                              error if file to read doesn't exist.
      * @return Returns the {@code error} if reading was not successful, otherwise {@code null}.
      */
-    @NonNull
-    public static <T extends Serializable> ReadSerializableObjectResult readSerializableObjectFromFile(String label, final String filePath, Class<T> readObjectType, final boolean ignoreNonExistentFile) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return new ReadSerializableObjectResult(FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "readSerializableObjectFromFile"), null);
+    @JvmStatic
+    fun <T : Serializable> readSerializableObjectFromFile(
+        label: String?,
+        filePath: String?,
+        readObjectType: Class<T>,
+        ignoreNonExistentFile: Boolean
+    ): ReadSerializableObjectResult {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return ReadSerializableObjectResult(
+                FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(
+                    "${lbl}file path",
+                    "readSerializableObjectFromFile"
+                ), null
+            )
+        }
 
-        Logger.logVerbose(LOG_TAG, "Reading serializable object from " + label + "file at path \"" + filePath + "\"");
+        Logger.logVerbose(LOG_TAG, "Reading serializable object from ${lbl}file at path \"$filePath\"")
 
-        T serializableObject;
+        val serializableObject: T
 
-        FileType fileType = getFileType(filePath, false);
+        val fileType = getFileType(filePath, false)
 
         // If file exists but not a regular file
         if (fileType != FileType.NO_EXIST && fileType != FileType.REGULAR) {
-            return new ReadSerializableObjectResult(FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError(label + "file", filePath).setLabel(label + "file"), null);
+            return ReadSerializableObjectResult(
+                FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError("${lbl}file", filePath)
+                    .setLabel("${lbl}file"), null
+            )
         }
 
         // If file does not exist
         if (fileType == FileType.NO_EXIST) {
             // If reading is to be ignored if file does not exist
-            if (ignoreNonExistentFile)
-                return new ReadSerializableObjectResult(null, null);
-                // Else return with error
-            else {
-                label += "file meant to be read";
-                return new ReadSerializableObjectResult(FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(label, filePath).setLabel(label), null);
+            return if (ignoreNonExistentFile) {
+                ReadSerializableObjectResult(null, null)
+            } else {
+                val finalLbl = "${lbl}file meant to be read"
+                ReadSerializableObjectResult(
+                    FileUtilsErrno.ERRNO_FILE_NOT_FOUND_AT_PATH.getError(finalLbl, filePath).setLabel(finalLbl), null
+                )
             }
         }
 
-        FileInputStream fileInputStream = null;
-        ObjectInputStream objectInputStream = null;
+        var fileInputStream: FileInputStream? = null
+        var objectInputStream: ObjectInputStream? = null
         try {
             // Read serializable object from file
-            fileInputStream = new FileInputStream(filePath);
-            objectInputStream = new ObjectInputStream(fileInputStream);
-            //serializableObject = (T) objectInputStream.readObject();
-            serializableObject = readObjectType.cast(objectInputStream.readObject());
-
-            //Logger.logVerbose(LOG_TAG, Logger.getMultiLineLogStringEntry("String", DataUtils.getTruncatedCommandOutput(dataStringBuilder.toString(), Logger.LOGGER_ENTRY_MAX_SAFE_PAYLOAD, true, false, true), "-"));
-        } catch (Exception e) {
-            return new ReadSerializableObjectResult(FileUtilsErrno.ERRNO_READING_SERIALIZABLE_OBJECT_TO_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage()), null);
+            fileInputStream = FileInputStream(filePath)
+            objectInputStream = ObjectInputStream(fileInputStream)
+            serializableObject = readObjectType.cast(objectInputStream.readObject())!!
+        } catch (e: Exception) {
+            return ReadSerializableObjectResult(
+                FileUtilsErrno.ERRNO_READING_SERIALIZABLE_OBJECT_TO_FILE_FAILED_WITH_EXCEPTION
+                    .getError(e, "${lbl}file", filePath, e.message), null
+            )
         } finally {
-            closeCloseable(fileInputStream);
-            closeCloseable(objectInputStream);
+            closeCloseable(fileInputStream)
+            closeCloseable(objectInputStream)
         }
 
-        return new ReadSerializableObjectResult(null, serializableObject);
+        return ReadSerializableObjectResult(null, serializableObject)
     }
 
     /**
@@ -1659,42 +1841,61 @@ public class FileUtils {
      * @param append The {@code boolean} that decides if file should be appended to or not.
      * @return Returns the {@code error} if writing was not successful, otherwise {@code null}.
      */
-    public static Error writeTextToFile(String label, final String filePath, Charset charset, final String dataString, final boolean append) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "writeStringToFile");
-
-        Logger.logVerbose(LOG_TAG, Logger.getMultiLineLogStringEntry("Writing text to " + label + "file at path \"" + filePath + "\"", DataUtils.getTruncatedCommandOutput(dataString, Logger.LOGGER_ENTRY_MAX_SAFE_PAYLOAD, true, false, true), "-"));
-
-        Error error;
-
-        error = preWriteToFile(label, filePath);
-        if (error != null)
-            return error;
-
-        if (charset == null) charset = Charset.defaultCharset();
-
-        // Check if charset is supported
-        error = isCharsetSupported(charset);
-        if (error != null)
-            return error;
-
-        FileOutputStream fileOutputStream = null;
-        BufferedWriter bufferedWriter = null;
-        try {
-            // Write text to file
-            fileOutputStream = new FileOutputStream(filePath, append);
-            bufferedWriter = new BufferedWriter(new OutputStreamWriter(fileOutputStream, charset));
-
-            bufferedWriter.write(dataString);
-            bufferedWriter.flush();
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_WRITING_TEXT_TO_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage());
-        } finally {
-            closeCloseable(fileOutputStream);
-            closeCloseable(bufferedWriter);
+    @JvmStatic
+    fun writeTextToFile(
+        label: String?,
+        filePath: String?,
+        charset: Charset?,
+        dataString: String?,
+        append: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "writeStringToFile")
         }
 
-        return null;
+        Logger.logVerbose(
+            LOG_TAG,
+            Logger.getMultiLineLogStringEntry(
+                "Writing text to ${lbl}file at path \"$filePath\"",
+                DataUtils.getTruncatedCommandOutput(
+                    dataString,
+                    Logger.LOGGER_ENTRY_MAX_SAFE_PAYLOAD,
+                    true,
+                    false,
+                    true
+                ),
+                "-"
+            )
+        )
+
+        val error = preWriteToFile(label, filePath)
+        if (error != null) return error
+
+        val cs = charset ?: Charset.defaultCharset()
+
+        // Check if charset is supported
+        val errorCharset = isCharsetSupported(cs)
+        if (errorCharset != null) return errorCharset
+
+        var fileOutputStream: FileOutputStream? = null
+        var bufferedWriter: BufferedWriter? = null
+        try {
+            // Write text to file
+            fileOutputStream = FileOutputStream(filePath, append)
+            bufferedWriter = BufferedWriter(OutputStreamWriter(fileOutputStream, cs))
+
+            bufferedWriter.write(dataString ?: "")
+            bufferedWriter.flush()
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_WRITING_TEXT_TO_FILE_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}file", filePath, e.message)
+        } finally {
+            closeCloseable(fileOutputStream)
+            closeCloseable(bufferedWriter)
+        }
+
+        return null
     }
 
     /**
@@ -1705,56 +1906,57 @@ public class FileUtils {
      * @param serializableObject The object to write to file.
      * @return Returns the {@code error} if writing was not successful, otherwise {@code null}.
      */
-    public static <T extends Serializable> Error writeSerializableObjectToFile(String label, final String filePath, final T serializableObject) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "writeSerializableObjectToFile");
-
-        Logger.logVerbose(LOG_TAG, "Writing serializable object to " + label + "file at path \"" + filePath + "\"");
-
-        Error error;
-
-        error = preWriteToFile(label, filePath);
-        if (error != null)
-            return error;
-
-        FileOutputStream fileOutputStream = null;
-        ObjectOutputStream objectOutputStream = null;
-        try {
-            // Write serializable object to file
-            fileOutputStream = new FileOutputStream(filePath);
-            objectOutputStream = new ObjectOutputStream(fileOutputStream);
-
-            objectOutputStream.writeObject(serializableObject);
-            objectOutputStream.flush();
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_WRITING_SERIALIZABLE_OBJECT_TO_FILE_FAILED_WITH_EXCEPTION.getError(e, label + "file", filePath, e.getMessage());
-        } finally {
-            closeCloseable(fileOutputStream);
-            closeCloseable(objectOutputStream);
+    @JvmStatic
+    fun <T : Serializable> writeSerializableObjectToFile(
+        label: String?,
+        filePath: String?,
+        serializableObject: T?
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "writeSerializableObjectToFile")
         }
 
-        return null;
+        Logger.logVerbose(LOG_TAG, "Writing serializable object to ${lbl}file at path \"$filePath\"")
+
+        val error = preWriteToFile(label, filePath)
+        if (error != null) return error
+
+        var fileOutputStream: FileOutputStream? = null
+        var objectOutputStream: ObjectOutputStream? = null
+        try {
+            // Write serializable object to file
+            fileOutputStream = FileOutputStream(filePath)
+            objectOutputStream = ObjectOutputStream(fileOutputStream)
+
+            objectOutputStream.writeObject(serializableObject)
+            objectOutputStream.flush()
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_WRITING_SERIALIZABLE_OBJECT_TO_FILE_FAILED_WITH_EXCEPTION
+                .getError(e, "${lbl}file", filePath, e.message)
+        } finally {
+            closeCloseable(fileOutputStream)
+            closeCloseable(objectOutputStream)
+        }
+
+        return null
     }
 
-    private static Error preWriteToFile(String label, String filePath) {
-        Error error;
-
-        FileType fileType = getFileType(filePath, false);
+    private fun preWriteToFile(label: String?, filePath: String?): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        val fileType = getFileType(filePath, false)
 
         // If file exists but not a regular file
         if (fileType != FileType.NO_EXIST && fileType != FileType.REGULAR) {
-            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError(label + "file", filePath).setLabel(label + "file");
+            return FileUtilsErrno.ERRNO_NON_REGULAR_FILE_FOUND.getError("${lbl}file", filePath).setLabel("${lbl}file")
         }
 
         // Create the file parent directory
-        error = createParentDirectoryFile(label + "file parent", filePath);
-        if (error != null)
-            return error;
+        val error = createParentDirectoryFile("${lbl}file parent", filePath)
+        if (error != null) return error
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Check if a specific {@link Charset} is supported.
@@ -1762,40 +1964,39 @@ public class FileUtils {
      * @param charset The {@link Charset} to check.
      * @return Returns the {@code error} if charset is not supported or failed to check it, otherwise {@code null}.
      */
-    public static Error isCharsetSupported(final Charset charset) {
-        if (charset == null) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("charset", "isCharsetSupported");
+    @JvmStatic
+    fun isCharsetSupported(charset: Charset?): Error? {
+        if (charset == null) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("charset", "isCharsetSupported")
+        }
 
         try {
             if (!Charset.isSupported(charset.name())) {
-                return FileUtilsErrno.ERRNO_UNSUPPORTED_CHARSET.getError(charset.name());
+                return FileUtilsErrno.ERRNO_UNSUPPORTED_CHARSET.getError(charset.name())
             }
-        } catch (Exception e) {
-            return FileUtilsErrno.ERRNO_CHECKING_IF_CHARSET_SUPPORTED_FAILED.getError(e, charset.name(), e.getMessage());
+        } catch (e: Exception) {
+            return FileUtilsErrno.ERRNO_CHECKING_IF_CHARSET_SUPPORTED_FAILED.getError(e, charset.name(), e.message)
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Close a {@link Closeable} object if not {@code null} and ignore any exceptions raised.
      *
      * @param closeable The {@link Closeable} object to close.
      */
-    public static void closeCloseable(final Closeable closeable) {
+    @JvmStatic
+    fun closeCloseable(closeable: Closeable?) {
         if (closeable != null) {
             try {
-                closeable.close();
-            }
-            catch (IOException e) {
+                closeable.close()
+            } catch (e: IOException) {
                 // ignore
             }
         }
     }
 
-
-
     /**
      * Set permissions for file at path. Existing permission outside the {@code permissionsToSet}
      * will be removed.
@@ -1803,8 +2004,9 @@ public class FileUtils {
      * @param filePath The {@code path} for file to set permissions to.
      * @param permissionsToSet The 3 character string that contains the "r", "w", "x" or "-" in-order.
      */
-    public static void setFilePermissions(final String filePath, final String permissionsToSet) {
-        setFilePermissions(null, filePath, permissionsToSet);
+    @JvmStatic
+    fun setFilePermissions(filePath: String?, permissionsToSet: String?) {
+        setFilePermissions(null, filePath, permissionsToSet)
     }
 
     /**
@@ -1815,58 +2017,55 @@ public class FileUtils {
      * @param filePath The {@code path} for file to set permissions to.
      * @param permissionsToSet The 3 character string that contains the "r", "w", "x" or "-" in-order.
      */
-    public static void setFilePermissions(String label, final String filePath, final String permissionsToSet) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return;
+    @JvmStatic
+    fun setFilePermissions(label: String?, filePath: String?, permissionsToSet: String?) {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) return
 
         if (!isValidPermissionString(permissionsToSet)) {
-            Logger.logError(LOG_TAG, "Invalid permissionsToSet passed to setFilePermissions: \"" + permissionsToSet + "\"");
-            return;
+            Logger.logError(LOG_TAG, "Invalid permissionsToSet passed to setFilePermissions: \"$permissionsToSet\"")
+            return
         }
 
-        File file = new File(filePath);
+        val file = File(filePath)
 
-        if (permissionsToSet.contains("r")) {
+        if (permissionsToSet!!.contains("r")) {
             if (!file.canRead()) {
-                Logger.logVerbose(LOG_TAG, "Setting read permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setReadable(true);
+                Logger.logVerbose(LOG_TAG, "Setting read permissions for ${lbl}file at path \"$filePath\"")
+                file.setReadable(true)
             }
         } else {
             if (file.canRead()) {
-                Logger.logVerbose(LOG_TAG, "Removing read permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setReadable(false);
+                Logger.logVerbose(LOG_TAG, "Removing read permissions for ${lbl}file at path \"$filePath\"")
+                file.setReadable(false)
             }
         }
-
 
         if (permissionsToSet.contains("w")) {
             if (!file.canWrite()) {
-                Logger.logVerbose(LOG_TAG, "Setting write permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setWritable(true);
+                Logger.logVerbose(LOG_TAG, "Setting write permissions for ${lbl}file at path \"$filePath\"")
+                file.setWritable(true)
             }
         } else {
             if (file.canWrite()) {
-                Logger.logVerbose(LOG_TAG, "Removing write permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setWritable(false);
+                Logger.logVerbose(LOG_TAG, "Removing write permissions for ${lbl}file at path \"$filePath\"")
+                file.setWritable(false)
             }
         }
-
 
         if (permissionsToSet.contains("x")) {
             if (!file.canExecute()) {
-                Logger.logVerbose(LOG_TAG, "Setting execute permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setExecutable(true);
+                Logger.logVerbose(LOG_TAG, "Setting execute permissions for ${lbl}file at path \"$filePath\"")
+                file.setExecutable(true)
             }
         } else {
             if (file.canExecute()) {
-                Logger.logVerbose(LOG_TAG, "Removing execute permissions for " + label + "file at path \"" + filePath + "\"");
-                file.setExecutable(false);
+                Logger.logVerbose(LOG_TAG, "Removing execute permissions for ${lbl}file at path \"$filePath\"")
+                file.setExecutable(false)
             }
         }
     }
 
-
-
     /**
      * Set missing permissions for file at path. Existing permission outside the {@code permissionsToSet}
      * will not be removed.
@@ -1874,8 +2073,9 @@ public class FileUtils {
      * @param filePath The {@code path} for file to set permissions to.
      * @param permissionsToSet The 3 character string that contains the "r", "w", "x" or "-" in-order.
      */
-    public static void setMissingFilePermissions(final String filePath, final String permissionsToSet) {
-        setMissingFilePermissions(null, filePath, permissionsToSet);
+    @JvmStatic
+    fun setMissingFilePermissions(filePath: String?, permissionsToSet: String?) {
+        setMissingFilePermissions(null, filePath, permissionsToSet)
     }
 
     /**
@@ -1886,34 +2086,33 @@ public class FileUtils {
      * @param filePath The {@code path} for file to set permissions to.
      * @param permissionsToSet The 3 character string that contains the "r", "w", "x" or "-" in-order.
      */
-    public static void setMissingFilePermissions(String label, final String filePath, final String permissionsToSet) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return;
+    @JvmStatic
+    fun setMissingFilePermissions(label: String?, filePath: String?, permissionsToSet: String?) {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) return
 
         if (!isValidPermissionString(permissionsToSet)) {
-            Logger.logError(LOG_TAG, "Invalid permissionsToSet passed to setMissingFilePermissions: \"" + permissionsToSet + "\"");
-            return;
+            Logger.logError(LOG_TAG, "Invalid permissionsToSet passed to setMissingFilePermissions: \"$permissionsToSet\"")
+            return
         }
 
-        File file = new File(filePath);
+        val file = File(filePath)
 
-        if (permissionsToSet.contains("r") && !file.canRead()) {
-            Logger.logVerbose(LOG_TAG, "Setting missing read permissions for " + label + "file at path \"" + filePath + "\"");
-            file.setReadable(true);
+        if (permissionsToSet!!.contains("r") && !file.canRead()) {
+            Logger.logVerbose(LOG_TAG, "Setting missing read permissions for ${lbl}file at path \"$filePath\"")
+            file.setReadable(true)
         }
 
         if (permissionsToSet.contains("w") && !file.canWrite()) {
-            Logger.logVerbose(LOG_TAG, "Setting missing write permissions for " + label + "file at path \"" + filePath + "\"");
-            file.setWritable(true);
+            Logger.logVerbose(LOG_TAG, "Setting missing write permissions for ${lbl}file at path \"$filePath\"")
+            file.setWritable(true)
         }
 
         if (permissionsToSet.contains("x") && !file.canExecute()) {
-            Logger.logVerbose(LOG_TAG, "Setting missing execute permissions for " + label + "file at path \"" + filePath + "\"");
-            file.setExecutable(true);
+            Logger.logVerbose(LOG_TAG, "Setting missing execute permissions for ${lbl}file at path \"$filePath\"")
+            file.setExecutable(true)
         }
     }
-
-
 
     /**
      * Checking missing permissions for file at path.
@@ -1924,8 +2123,9 @@ public class FileUtils {
      *                              error is to be ignored.
      * @return Returns the {@code error} if validating permissions failed, otherwise {@code null}.
      */
-    public static Error checkMissingFilePermissions(final String filePath, final String permissionsToCheck, final boolean ignoreIfNotExecutable) {
-        return checkMissingFilePermissions(null, filePath, permissionsToCheck, ignoreIfNotExecutable);
+    @JvmStatic
+    fun checkMissingFilePermissions(filePath: String?, permissionsToCheck: String?, ignoreIfNotExecutable: Boolean): Error? {
+        return checkMissingFilePermissions(null, filePath, permissionsToCheck, ignoreIfNotExecutable)
     }
 
     /**
@@ -1938,36 +2138,41 @@ public class FileUtils {
      *                              error is to be ignored.
      * @return Returns the {@code error} if validating permissions failed, otherwise {@code null}.
      */
-    public static Error checkMissingFilePermissions(String label, final String filePath, final String permissionsToCheck, final boolean ignoreIfNotExecutable) {
-        label = (label == null || label.isEmpty() ? "" : label + " ");
-        if (filePath == null || filePath.isEmpty()) return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError(label + "file path", "checkMissingFilePermissions");
-
-        if (!isValidPermissionString(permissionsToCheck)) {
-            Logger.logError(LOG_TAG, "Invalid permissionsToCheck passed to checkMissingFilePermissions: \"" + permissionsToCheck + "\"");
-            return FileUtilsErrno.ERRNO_INVALID_FILE_PERMISSIONS_STRING_TO_CHECK.getError();
+    @JvmStatic
+    fun checkMissingFilePermissions(
+        label: String?,
+        filePath: String?,
+        permissionsToCheck: String?,
+        ignoreIfNotExecutable: Boolean
+    ): Error? {
+        val lbl = if (label.isNullOrEmpty()) "" else "$label "
+        if (filePath.isNullOrEmpty()) {
+            return FunctionErrno.ERRNO_NULL_OR_EMPTY_PARAMETER.getError("${lbl}file path", "checkMissingFilePermissions")
         }
 
-        File file = new File(filePath);
+        if (!isValidPermissionString(permissionsToCheck)) {
+            Logger.logError(LOG_TAG, "Invalid permissionsToCheck passed to checkMissingFilePermissions: \"$permissionsToCheck\"")
+            return FileUtilsErrno.ERRNO_INVALID_FILE_PERMISSIONS_STRING_TO_CHECK.getError()
+        }
+
+        val file = File(filePath)
 
         // If file is not readable
-        if (permissionsToCheck.contains("r") && !file.canRead()) {
-            return FileUtilsErrno.ERRNO_FILE_NOT_READABLE.getError(label + "file", filePath).setLabel(label + "file");
+        if (permissionsToCheck!!.contains("r") && !file.canRead()) {
+            return FileUtilsErrno.ERRNO_FILE_NOT_READABLE.getError("${lbl}file", filePath).setLabel("${lbl}file")
         }
 
         // If file is not writable
         if (permissionsToCheck.contains("w") && !file.canWrite()) {
-            return FileUtilsErrno.ERRNO_FILE_NOT_WRITABLE.getError(label + "file", filePath).setLabel(label + "file");
-        }
-        // If file is not executable
-        // This canExecute() will give "avc: granted { execute }" warnings for target sdk 29
-        else if (permissionsToCheck.contains("x") && !file.canExecute() && !ignoreIfNotExecutable) {
-            return FileUtilsErrno.ERRNO_FILE_NOT_EXECUTABLE.getError(label + "file", filePath).setLabel(label + "file");
+            return FileUtilsErrno.ERRNO_FILE_NOT_WRITABLE.getError("${lbl}file", filePath).setLabel("${lbl}file")
+        } else if (permissionsToCheck.contains("x") && !file.canExecute() && !ignoreIfNotExecutable) {
+            // If file is not executable
+            // This canExecute() will give "avc: granted { execute }" warnings for target sdk 29
+            return FileUtilsErrno.ERRNO_FILE_NOT_EXECUTABLE.getError("${lbl}file", filePath).setLabel("${lbl}file")
         }
 
-        return null;
+        return null
     }
-
-
 
     /**
      * Checks whether string exactly matches the 3 character permission string that
@@ -1976,12 +2181,11 @@ public class FileUtils {
      * @param string The {@link String} to check.
      * @return Returns {@code true} if string exactly matches a permission string, otherwise {@code false}.
      */
-    public static boolean isValidPermissionString(final String string) {
-        if (string == null || string.isEmpty()) return false;
-        return Pattern.compile("^([r-])[w-][x-]$", 0).matcher(string).matches();
+    @JvmStatic
+    fun isValidPermissionString(string: String?): Boolean {
+        if (string.isNullOrEmpty()) return false
+        return Pattern.compile("^([r-])[w-][x-]$", 0).matcher(string).matches()
     }
-
-
 
     /**
      * Get a {@link Error} that contains a shorter version of {@link Errno} message.
@@ -1989,20 +2193,20 @@ public class FileUtils {
      * @param error The original {@link Error} returned by one of the {@link FileUtils} functions.
      * @return Returns the shorter {@link Error} if one exists, otherwise original {@code error}.
      */
-    public static Error getShortFileUtilsError(final Error error) {
-        String type = error.getType();
-        if (!FileUtilsErrno.TYPE.equals(type)) return error;
+    @JvmStatic
+    fun getShortFileUtilsError(error: Error): Error {
+        val type = error.getType()
+        if (FileUtilsErrno.TYPE != type) return error
 
-        Errno shortErrno = FileUtilsErrno.ERRNO_SHORT_MAPPING.get(Errno.valueOf(type, error.getCode()));
-        if (shortErrno == null) return error;
+        val shortErrno = FileUtilsErrno.ERRNO_SHORT_MAPPING[Errno.valueOf(type, error.getCode())] ?: return error
 
-        List<Throwable> throwables = error.getThrowablesList();
-        if (throwables.isEmpty())
-            return shortErrno.getError(DataUtils.getDefaultIfNull(error.getLabel(), "file"));
-        else
-            return shortErrno.getError(throwables, error.getLabel(), "file");
+        val throwables = error.getThrowablesList()
+        return if (throwables.isEmpty()) {
+            shortErrno.getError(DataUtils.getDefaultIfNull(error.getLabel(), "file"))
+        } else {
+            shortErrno.getError(throwables, error.getLabel(), "file")
+        }
     }
-
 
     /**
      * Get file dirname for file at {@code filePath}.
@@ -2010,10 +2214,11 @@ public class FileUtils {
      * @param filePath The {@code path} for file.
      * @return Returns the file dirname if not {@code null}.
      */
-    public static String getFileDirname(String filePath) {
-        if (DataUtils.isNullOrEmpty(filePath)) return null;
-        int lastSlash = filePath.lastIndexOf('/');
-        return (lastSlash == -1) ? null : filePath.substring(0, lastSlash);
+    @JvmStatic
+    fun getFileDirname(filePath: String?): String? {
+        if (DataUtils.isNullOrEmpty(filePath)) return null
+        val lastSlash = filePath!!.lastIndexOf('/')
+        return if (lastSlash == -1) null else filePath.substring(0, lastSlash)
     }
 
     /**
@@ -2022,10 +2227,11 @@ public class FileUtils {
      * @param filePath The {@code path} for file.
      * @return Returns the file basename if not {@code null}.
      */
-    public static String getFileBasename(String filePath) {
-        if (DataUtils.isNullOrEmpty(filePath)) return null;
-        int lastSlash = filePath.lastIndexOf('/');
-        return (lastSlash == -1) ? filePath : filePath.substring(lastSlash + 1);
+    @JvmStatic
+    fun getFileBasename(filePath: String?): String? {
+        if (DataUtils.isNullOrEmpty(filePath)) return null
+        val lastSlash = filePath!!.lastIndexOf('/')
+        return if (lastSlash == -1) filePath else filePath.substring(lastSlash + 1)
     }
 
     /**
@@ -2034,11 +2240,12 @@ public class FileUtils {
      * @param filePath The {@code path} for file.
      * @return Returns the file basename without extension if not {@code null}.
      */
-    public static String getFileBasenameWithoutExtension(String filePath) {
-        String fileBasename = getFileBasename(filePath);
-        if (DataUtils.isNullOrEmpty(fileBasename)) return null;
-        int lastDot = fileBasename.lastIndexOf('.');
-        return (lastDot == -1) ? fileBasename : fileBasename.substring(0, lastDot);
+    @JvmStatic
+    fun getFileBasenameWithoutExtension(filePath: String?): String? {
+        val fileBasename = getFileBasename(filePath)
+        if (DataUtils.isNullOrEmpty(fileBasename)) return null
+        val lastDot = fileBasename!!.lastIndexOf('.')
+        return if (lastDot == -1) fileBasename else fileBasename.substring(0, lastDot)
     }
 
 }
