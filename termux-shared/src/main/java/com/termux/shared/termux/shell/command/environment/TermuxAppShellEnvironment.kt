@@ -129,11 +129,13 @@ class TermuxAppShellEnvironment {
                 // An app that does not have the same sharedUserId as termux app will not be able to get
                 // get termux context's classloader to get BuildConfig.TERMUX_PACKAGE_VARIANT via reflection.
                 // Check TermuxBootstrap.setTermuxPackageManagerAndVariantFromTermuxApp()
-                if (TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER != null) {
-                    environment[ENV_TERMUX_APP__PACKAGE_MANAGER] = TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER.getName()
+                val packageManager = TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER
+                if (packageManager != null) {
+                    environment[ENV_TERMUX_APP__PACKAGE_MANAGER] = packageManager.getName()
                 }
-                if (TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT != null) {
-                    environment[ENV_TERMUX_APP__PACKAGE_VARIANT] = TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT.getName()
+                val packageVariant = TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
+                if (packageVariant != null) {
+                    environment[ENV_TERMUX_APP__PACKAGE_VARIANT] = packageVariant.getName()
                 }
 
                 // Will not be set for plugins
