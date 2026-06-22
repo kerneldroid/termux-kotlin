@@ -14,7 +14,7 @@ open class TerminalExtraKeys(
     private val mTerminalView: TerminalView
 ) : ExtraKeysView.IExtraKeysView {
 
-    override fun onExtraKeyButtonClick(view: View, buttonInfo: ExtraKeyButton, button: MaterialButton) {
+    override fun onExtraKeyButtonClick(view: View?, buttonInfo: ExtraKeyButton, button: MaterialButton?) {
         if (buttonInfo.isMacro) {
             val keys = buttonInfo.key.split(" ").toTypedArray()
             var ctrlDown = false
@@ -44,7 +44,7 @@ open class TerminalExtraKeys(
     }
 
     protected open fun onTerminalExtraKeyButtonClick(
-        view: View,
+        view: View?,
         key: String,
         ctrlDown: Boolean,
         altDown: Boolean,
@@ -77,9 +77,9 @@ open class TerminalExtraKeys(
     }
 
     override fun performExtraKeyButtonHapticFeedback(
-        view: View,
+        view: View?,
         buttonInfo: ExtraKeyButton,
-        button: MaterialButton
+        button: MaterialButton?
     ): Boolean {
         return false
     }

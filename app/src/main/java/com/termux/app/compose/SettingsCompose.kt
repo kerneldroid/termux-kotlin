@@ -748,7 +748,7 @@ fun TerminalViewSettingsScreen(context: Context) {
 fun AboutSettingsScreen(context: Context) {
     val appInfo = remember {
         try {
-            TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES)
+            TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES).orEmpty()
                 .replace("### ", "")
                 .replace("## ", "")
                 .replace("* ", "• ")
