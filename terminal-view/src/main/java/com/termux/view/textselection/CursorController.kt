@@ -1,36 +1,36 @@
-package com.termux.view.textselection;
+package com.termux.view.textselection
 
-import android.view.MotionEvent;
-import android.view.ViewTreeObserver;
+import android.view.MotionEvent
+import android.view.ViewTreeObserver
 
-import com.termux.view.TerminalView;
+import com.termux.view.TerminalView
 
 /**
  * A CursorController instance can be used to control cursors in the text.
  * It is not used outside of {@link TerminalView}.
  */
-public interface CursorController extends ViewTreeObserver.OnTouchModeChangeListener {
+interface CursorController : ViewTreeObserver.OnTouchModeChangeListener {
     /**
      * Show the cursors on screen. Will be drawn by {@link #render()} by a call during onDraw.
      * See also {@link #hide()}.
      */
-    void show(MotionEvent event);
+    fun show(event: MotionEvent?)
 
     /**
      * Hide the cursors from screen.
      * See also {@link #show(MotionEvent event)}.
      */
-    boolean hide();
+    fun hide(): Boolean
 
     /**
      * Render the cursors.
      */
-    void render();
+    fun render()
 
     /**
      * Update the cursor positions.
      */
-    void updatePosition(TextSelectionHandleView handle, int x, int y);
+    fun updatePosition(handle: TextSelectionHandleView?, x: Int, y: Int)
 
     /**
      * This method is called by {@link #onTouchEvent(MotionEvent)} and gives the cursors
@@ -38,18 +38,17 @@ public interface CursorController extends ViewTreeObserver.OnTouchModeChangeList
      *
      * @param event The touch event
      */
-    boolean onTouchEvent(MotionEvent event);
+    fun onTouchEvent(event: MotionEvent?): Boolean
 
     /**
      * Called when the view is detached from window. Perform house keeping task, such as
      * stopping Runnable thread that would otherwise keep a reference on the context, thus
      * preventing the activity to be recycled.
      */
-    void onDetached();
+    fun onDetached()
 
     /**
      * @return true if the cursors are currently active.
      */
-    boolean isActive();
-
+    fun isActive(): Boolean
 }
