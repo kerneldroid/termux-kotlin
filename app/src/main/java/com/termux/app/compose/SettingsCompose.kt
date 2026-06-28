@@ -431,7 +431,7 @@ private fun showAboutReport(context: Context) {
         aboutString.append("\n\n").append(AndroidUtils.getDeviceInfoMarkdownString(context, true))
         aboutString.append("\n\n").append(TermuxUtils.getImportantLinksMarkdownString(context))
 
-        val userActionName = UserAction.ABOUT.name
+        val userActionName = UserAction.ABOUT.actionName
 
         val reportInfo = ReportInfo(
             userActionName,
