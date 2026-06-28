@@ -266,7 +266,7 @@ class TerminalSession(
         JNI.close(mTerminalFileDescriptor)
     }
 
-    override fun titleChanged(oldTitle: String, newTitle: String) {
+    override fun titleChanged(oldTitle: String?, newTitle: String?) {
         mClient?.onTitleChanged(this)
     }
 

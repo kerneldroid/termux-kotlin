@@ -14,7 +14,7 @@ abstract class TerminalOutput {
     abstract fun write(data: ByteArray, offset: Int, count: Int)
 
     /** Notify the terminal client that the terminal title has changed. */
-    abstract fun titleChanged(oldTitle: String, newTitle: String)
+    abstract fun titleChanged(oldTitle: String?, newTitle: String?)
 
     /** Notify the terminal client that text should be copied to clipboard. */
     abstract fun onCopyTextToClipboard(text: String)

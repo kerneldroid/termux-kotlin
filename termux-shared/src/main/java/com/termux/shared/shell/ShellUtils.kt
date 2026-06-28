@@ -52,13 +52,13 @@ object ShellUtils {
 
         val terminalEmulator = terminalSession.emulator ?: return null
 
-        val terminalBuffer = terminalEmulator.screen ?: return null
+        val terminalBuffer = terminalEmulator.screen
 
         var transcriptText = if (linesJoined) {
             terminalBuffer.transcriptTextWithFullLinesJoined
         } else {
             terminalBuffer.transcriptTextWithoutJoinedLines
-        } ?: return null
+        }
 
         if (trim) {
             transcriptText = transcriptText.trim()
