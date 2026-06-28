@@ -402,7 +402,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     public void onServiceConnected(ComponentName componentName, IBinder service) {
         Logger.logDebug(LOG_TAG, "onServiceConnected");
 
-        mTermuxService = ((TermuxService.LocalBinder) service).service;
+        mTermuxService = ((TermuxService.LocalBinder) service).getService();
 
         setTermuxSessionsListView();
 
