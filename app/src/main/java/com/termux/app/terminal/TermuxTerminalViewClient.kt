@@ -61,7 +61,6 @@ open class TermuxTerminalViewClient(
     val activity: TermuxActivity
         get() = mActivity
 
-
     /**
      * Should be called when mActivity.onCreate() is called
      */

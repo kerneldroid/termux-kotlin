@@ -451,7 +451,7 @@ object TermuxFileUtils {
             null,
             statScript.toString() + "\n",
             "/",
-            ExecutionCommand.Runner.APP_SHELL.name,
+            ExecutionCommand.Runner.APP_SHELL.getName(),
             true
         )
         executionCommand.commandLabel = TermuxConstants.TERMUX_APP_NAME + " Files Stat Command"

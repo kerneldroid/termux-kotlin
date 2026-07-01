@@ -14,7 +14,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.PowerManager
-import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import com.termux.R
 import com.termux.app.event.SystemEventReceiver
@@ -364,7 +363,7 @@ class TermuxService : Service(), AppShell.AppShellClient, TermuxSession.TermuxSe
         // If EXTRA_RUNNER is passed, use that, otherwise check EXTRA_BACKGROUND and default to Runner.TERMINAL_SESSION
         executionCommand.runner = IntentUtils.getStringExtraIfSet(
             intent, TERMUX_SERVICE.EXTRA_RUNNER,
-            if (intent.getBooleanExtra(TERMUX_SERVICE.EXTRA_BACKGROUND, false)) Runner.APP_SHELL.name else Runner.TERMINAL_SESSION.name
+            if (intent.getBooleanExtra(TERMUX_SERVICE.EXTRA_BACKGROUND, false)) Runner.APP_SHELL.getName() else Runner.TERMINAL_SESSION.getName()
         )
         if (Runner.runnerOf(executionCommand.runner) == null) {
             val errmsg = this.getString(R.string.error_termux_service_invalid_execution_command_runner, executionCommand.runner)
@@ -459,7 +458,7 @@ class TermuxService : Service(), AppShell.AppShellClient, TermuxSession.TermuxSe
         return createTermuxTask(
             ExecutionCommand(
                 TermuxShellManager.getNextShellId(), executablePath,
-                arguments, stdin, workingDirectory, Runner.APP_SHELL.name, false
+                arguments, stdin, workingDirectory, Runner.APP_SHELL.getName(), false
             )
         )
     }
@@ -579,7 +578,7 @@ class TermuxService : Service(), AppShell.AppShellClient, TermuxSession.TermuxSe
     ): TermuxSession? {
         val executionCommand = ExecutionCommand(
             TermuxShellManager.getNextShellId(),
-            executablePath, arguments, stdin, workingDirectory, Runner.TERMINAL_SESSION.name, isFailSafe
+            executablePath, arguments, stdin, workingDirectory, Runner.TERMINAL_SESSION.getName(), isFailSafe
         )
         executionCommand.shellName = sessionName
         return createTermuxSession(executionCommand)

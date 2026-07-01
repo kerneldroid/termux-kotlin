@@ -332,6 +332,14 @@ class TerminalView @JvmOverloads constructor(
 
         updateSize()
 
+        // When embedded in Compose AndroidView, the view may not be laid out yet when
+        // attachSession() is first called, so updateSize() bails out. onSizeChanged() was
+        // already called with mTermSession==null, so it won't re-trigger. Post updateSize()
+        // to ensure the emulator is created after layout completes.
+        if (mEmulator == null) {
+            post { updateSize() }
+        }
+
         // Wait with enabling the scrollbar until we have a terminal to get scroll position from.
         isVerticalScrollBarEnabled = true
 

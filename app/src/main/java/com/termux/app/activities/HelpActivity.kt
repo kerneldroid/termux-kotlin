@@ -10,6 +10,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ProgressBar
 import android.widget.RelativeLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.termux.shared.termux.TermuxConstants
 
@@ -60,14 +61,16 @@ class HelpActivity : AppCompatActivity() {
             }
         }
         mWebView.loadUrl(TermuxConstants.TERMUX_WIKI_URL)
-    }
 
-    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
-    override fun onBackPressed() {
-        if (mWebView.canGoBack()) {
-            mWebView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (mWebView.canGoBack()) {
+                    mWebView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 }

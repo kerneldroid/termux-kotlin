@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
@@ -76,6 +77,9 @@ fun TermuxMainScreen(
                     onSessionRename = { session ->
                         activity.termuxTerminalSessionClient?.renameSession(session.terminalSession)
                     },
+                    onSessionKill = { session ->
+                        session.terminalSession?.finishIfRunning()
+                    },
                     onNewSession = {
                         activity.termuxTerminalSessionClient?.addNewSession(false, null)
                     },
@@ -89,32 +93,34 @@ fun TermuxMainScreen(
             }
         }
     ) {
-    Scaffold(
-        modifier = Modifier.imePadding(),
-        bottomBar = {
-            if (showToolbar) {
-                TermuxToolbar(activity, savedTextInput)
+        Scaffold(
+            modifier = Modifier.imePadding(),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            bottomBar = {
+                if (showToolbar) {
+                    TermuxToolbar(activity, savedTextInput)
+                }
+            }
+        ) { paddingValues ->
+            val marginHorizontal = activity.properties.terminalMarginHorizontal.dp
+            val marginVertical = activity.properties.terminalMarginVertical.dp
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = marginHorizontal, vertical = marginVertical)
+            ) {
+                AndroidView(
+                    factory = {
+                        activity.terminalView.apply {
+                            post { requestFocus() }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
-    ) { paddingValues ->
-        val marginHorizontal = activity.properties.terminalMarginHorizontal.dp
-        val marginVertical = activity.properties.terminalMarginVertical.dp
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = marginHorizontal, vertical = marginVertical)
-        ) {
-            AndroidView(
-                factory = {
-                    activity.terminalView.apply {
-                        post { requestFocus() }
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
     }
 
     // Context Menu Overlay

@@ -269,7 +269,6 @@ class TermuxActivityRootView : LinearLayout, ViewTreeObserver.OnGlobalLayoutList
                 pxHidden = 0
             }
 
-
             if (setMargin) {
                 if (root_view_logging_enabled) {
                     Logger.logVerbose(LOG_TAG, "Setting bottom margin to $pxHidden")

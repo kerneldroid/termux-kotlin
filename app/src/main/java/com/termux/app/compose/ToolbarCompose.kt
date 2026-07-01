@@ -1,9 +1,6 @@
 package com.termux.app.compose
 
 import android.content.Context
-import android.os.Build
-import android.view.View
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -22,24 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.termux.app.TermuxActivity
 import com.termux.shared.termux.extrakeys.ExtraKeyButton
 import com.termux.shared.termux.extrakeys.ExtraKeysInfo
 import com.termux.shared.termux.extrakeys.ExtraKeysView
 import com.termux.shared.termux.extrakeys.SpecialButton
-import com.termux.shared.termux.extrakeys.SpecialButtonState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlinx.coroutines.delay
@@ -158,7 +149,7 @@ fun ExtraKeysPage(activity: TermuxActivity) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .padding(4.dp)
     ) {
         for (rowButtons in matrix) {
             Row(
@@ -214,7 +205,7 @@ fun ExtraKeyButtonView(
 
     Box(
         modifier = modifier
-            .padding(horizontal = 2.dp, vertical = 2.dp)
+            .padding(2.dp)
             .height(buttonHeight)
             .clip(RoundedCornerShape(8.dp))
             .background(
@@ -312,11 +303,10 @@ fun ExtraKeyButtonView(
                     else -> MaterialTheme.colorScheme.onSurface
                 },
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
+                fontWeight = FontWeight.Bold
             )
             if (isLocked) {
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Rounded.Lock,
                     contentDescription = "Locked",
@@ -345,8 +335,8 @@ fun ExtraKeyButtonView(
                     ) {
                         Text(
                             text = popup.display,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -388,11 +378,9 @@ fun TextInputPage(
                 .weight(1f)
                 .focusRequester(focusRequester),
             textStyle = MaterialTheme.typography.bodyMedium,
-            placeholder = { Text("Send to terminal...", fontSize = 14.sp) },
+            placeholder = { Text("Send to terminal...") },
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
             ),

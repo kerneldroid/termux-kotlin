@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import com.termux.shared.data.IntentUtils
 import com.termux.shared.logger.Logger
 import com.termux.shared.termux.TermuxUtils
@@ -82,7 +83,7 @@ class SystemEventReceiver : BroadcastReceiver() {
             intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED)
             intentFilter.addAction(Intent.ACTION_PACKAGE_REPLACED)
             intentFilter.addDataScheme("package")
-            context.registerReceiver(getInstance(), intentFilter)
+            ContextCompat.registerReceiver(context, getInstance(), intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         }
 
         @JvmStatic

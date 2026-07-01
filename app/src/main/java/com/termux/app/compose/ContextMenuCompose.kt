@@ -11,12 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.termux.app.TermuxActivity
 import com.termux.app.activities.HelpActivity
@@ -158,8 +154,7 @@ fun ContextMenuOverlay(
                                         onCheckedChange = {
                                             activity.toggleKeepScreenOn()
                                             stateHolder.isKeepScreenOn = it
-                                        },
-                                        modifier = Modifier.scale(0.8f)
+                                        }
                                     )
                                 }
                             )
@@ -240,7 +235,6 @@ fun ContextMenuItem(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(

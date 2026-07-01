@@ -20,9 +20,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.annotation.NonNull
-import androidx.annotation.Nullable
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.termux.R
 import com.termux.app.activities.HelpActivity
@@ -299,6 +299,16 @@ class TermuxActivity : AppCompatActivity(), ServiceConnection {
 
         setTermuxTerminalViewAndClients()
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isDrawerOpen) {
+                    closeDrawer()
+                } else {
+                    finishActivityIfNotFinishing()
+                }
+            }
+        })
+
         setTerminalToolbarView(savedInstanceState)
 
         mContextMenuStateHolder = ContextMenuStateHolder()
@@ -440,8 +450,7 @@ class TermuxActivity : AppCompatActivity(), ServiceConnection {
 
         try {
             unbindService(this)
-        } catch (e: Exception) {
-            // ignore.
+        } catch (_: Exception) {
         }
     }
 
@@ -602,15 +611,6 @@ class TermuxActivity : AppCompatActivity(), ServiceConnection {
         if (savedInstanceState == null) return
         if (mToolbarTextInput.isNotEmpty()) {
             savedInstanceState.putString(ARG_TERMINAL_TOOLBAR_TEXT_INPUT, mToolbarTextInput)
-        }
-    }
-
-    @SuppressLint("RtlHardcoded")
-    override fun onBackPressed() {
-        if (isDrawerOpen) {
-            closeDrawer()
-        } else {
-            finishActivityIfNotFinishing()
         }
     }
 
@@ -955,7 +955,7 @@ class TermuxActivity : AppCompatActivity(), ServiceConnection {
             addAction(TERMUX_ACTIVITY.ACTION_REQUEST_PERMISSIONS)
         }
 
-        registerReceiver(mTermuxActivityBroadcastReceiver, intentFilter)
+        ContextCompat.registerReceiver(this, mTermuxActivityBroadcastReceiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun unregisterTermuxActivityBroadcastReceiver() {
