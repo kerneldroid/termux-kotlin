@@ -7,12 +7,19 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Keyboard
@@ -32,8 +39,6 @@ import androidx.compose.ui.unit.sp
 import com.termux.app.activities.SettingsActivity
 import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession
 import androidx.compose.ui.text.font.Font
-import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.toShape
 import com.termux.R
 import android.content.SharedPreferences
 import java.io.File
@@ -212,7 +217,7 @@ fun TermuxTheme(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun TermuxDrawerContent(
     activity: Activity,
@@ -220,10 +225,15 @@ fun TermuxDrawerContent(
     currentSession: TermuxSession?,
     onSessionSelected: (TermuxSession) -> Unit,
     onSessionRename: (TermuxSession) -> Unit,
+    onSessionKill: (TermuxSession) -> Unit,
     onNewSession: () -> Unit,
     onToggleKeyboard: () -> Unit,
     onToggleToolbar: () -> Unit
 ) {
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<TermuxSession?>(null) }
+    var renameText by remember { mutableStateOf("") }
+
     TermuxTheme {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -283,50 +293,105 @@ fun TermuxDrawerContent(
                             label = "contentColor"
                         )
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(backgroundColor)
-                                .clickable { onSessionSelected(session) }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
+                        var showContextMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            Row(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(backgroundColor)
+                                    .combinedClickable(
+                                        onClick = { onSessionSelected(session) },
+                                        onLongClick = { showContextMenu = true }
+                                    )
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${index + 1}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                val sessionName = session.terminalSession?.mSessionName
-                                val title = session.terminalSession?.title ?: "Terminal"
-                                if (sessionName?.isNotEmpty() == true) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
-                                        text = sessionName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = contentColor
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = contentColor.copy(alpha = 0.8f)
-                                    )
-                                } else {
-                                    Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = contentColor
+                                        text = "${index + 1}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    val sessionName = session.terminalSession?.mSessionName
+                                    val title = session.terminalSession?.title ?: "Terminal"
+                                    if (sessionName?.isNotEmpty() == true) {
+                                        Text(
+                                            text = sessionName,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = contentColor
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = contentColor.copy(alpha = 0.8f)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = contentColor
+                                        )
+                                    }
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showContextMenu,
+                                onDismissRequest = { showContextMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Kill") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Delete,
+                                            contentDescription = null,
+                                            tint = Color.Red
+                                        )
+                                    },
+                                    onClick = {
+                                        showContextMenu = false
+                                        onSessionKill(session)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Rename") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Edit,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        showContextMenu = false
+                                        renameTarget = session
+                                        renameText = session.terminalSession?.mSessionName ?: ""
+                                        showRenameDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Switch to") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Rounded.PushPin,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        showContextMenu = false
+                                        onSessionSelected(session)
+                                    }
+                                )
                             }
                         }
                     }
@@ -358,5 +423,30 @@ fun TermuxDrawerContent(
                 }
             }
         }
+    }
+
+    if (showRenameDialog && renameTarget != null) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename Session") },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Session name") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    renameTarget!!.terminalSession?.mSessionName = renameText
+                    showRenameDialog = false
+                }) { Text("Rename") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }

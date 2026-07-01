@@ -11,13 +11,14 @@ fun setDrawerContent(
     currentSession: TermuxSession?,
     onSessionSelected: (TermuxSession) -> Unit,
     onSessionRename: (TermuxSession) -> Unit,
+    onSessionKill: (TermuxSession) -> Unit,
     onNewSession: () -> Unit,
     onToggleKeyboard: () -> Unit,
     onToggleToolbar: () -> Unit
 ) {
     composeView.setContent {
         com.termux.app.compose.TermuxDrawerContent(
-            activity, sessions, currentSession, onSessionSelected, onSessionRename, onNewSession, onToggleKeyboard, onToggleToolbar
+            activity, sessions, currentSession, onSessionSelected, onSessionRename, onSessionKill, onNewSession, onToggleKeyboard, onToggleToolbar
         )
     }
 }

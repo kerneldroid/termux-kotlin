@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     id "com.android.application"
     
     id "org.jetbrains.kotlin.plugin.compose"
+}
+
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(localPropsFile.newDataInputStream())
 }
 
 ext {
@@ -17,7 +25,7 @@ ext {
 android {
     namespace "com.termux"
 
-    compileSdkVersion project.properties.compileSdkVersion.toInteger()
+    compileSdk project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
     def appVersionName = System.getenv("TERMUX_APP_VERSION_NAME") ?: ""
     def apkVersionTag = System.getenv("TERMUX_APK_VERSION_TAG") ?: ""
@@ -39,13 +47,13 @@ android {
         implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
 
         // Compose dependencies
-        def composeBom = platform('androidx.compose:compose-bom:2025.02.00')
+        def composeBom = platform('androidx.compose:compose-bom:2026.06.00')
         implementation composeBom
         implementation "androidx.activity:activity-compose:1.13.0"
-        implementation "androidx.compose.ui:ui:1.12.0-alpha03"
-        implementation "androidx.compose.material3:material3:1.5.0-alpha21"
-        implementation "androidx.compose.ui:ui-text-google-fonts:1.12.0-alpha03"
-        implementation "androidx.compose.material:material-icons-extended:1.7.8"
+        implementation "androidx.compose.ui:ui"
+        implementation "androidx.compose.material3:material3:1.5.0-alpha22"
+        implementation "androidx.compose.ui:ui-text-google-fonts"
+        implementation "androidx.compose.material:material-icons-extended"
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
@@ -92,17 +100,14 @@ android {
         debug {
             storeFile file('testkey_untrusted.jks')
             keyAlias 'alias'
-            storePassword 'xrj45yWGLbsO7W0v'
-            keyPassword 'xrj45yWGLbsO7W0v'
+            storePassword System.getenv("TERMUX_DEBUG_STORE_PASSWORD") ?: localProps.getProperty('TERMUX_DEBUG_STORE_PASSWORD', 'android')
+            keyPassword System.getenv("TERMUX_DEBUG_KEY_PASSWORD") ?: localProps.getProperty('TERMUX_DEBUG_KEY_PASSWORD', 'android')
         }
-    }
-
-    signingConfigs {
         release {
-            storeFile file("../release.jks")
-            storePassword "Secur3P@ssw0rd!2026"
-            keyAlias "release"
-            keyPassword "Secur3P@ssw0rd!2026"
+            storeFile file(System.getenv("TERMUX_RELEASE_STORE_FILE") ?: localProps.getProperty('TERMUX_RELEASE_STORE_FILE', '../release.jks'))
+            storePassword System.getenv("TERMUX_RELEASE_STORE_PASSWORD") ?: localProps.getProperty('TERMUX_RELEASE_STORE_PASSWORD', '')
+            keyAlias System.getenv("TERMUX_RELEASE_KEY_ALIAS") ?: localProps.getProperty('TERMUX_RELEASE_KEY_ALIAS', 'release')
+            keyPassword System.getenv("TERMUX_RELEASE_KEY_PASSWORD") ?: localProps.getProperty('TERMUX_RELEASE_KEY_PASSWORD', '')
         }
     }
 

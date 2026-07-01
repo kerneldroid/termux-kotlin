@@ -49,7 +49,7 @@ object SELinuxUtils {
         return try {
             @SuppressLint("PrivateApi")
             val clazz = Class.forName(ANDROID_OS_SELINUX_CLASS)
-            val method = ReflectionUtils.getDeclaredMethod(clazz, methodName, Int::class.javaPrimitiveType)
+            val method = ReflectionUtils.getDeclaredMethod(clazz, methodName, Int::class.javaPrimitiveType!!)
             if (method == null) {
                 Logger.logError(LOG_TAG, "Failed to get $methodName() method of $ANDROID_OS_SELINUX_CLASS class")
                 return null

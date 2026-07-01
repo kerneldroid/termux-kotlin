@@ -2,9 +2,7 @@ package com.termux.app.compose
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.os.Environment
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -13,6 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -20,19 +21,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.fragment.app.FragmentContainerView
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.MaterialShapes
-import androidx.compose.material3.toShape
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.termux.shared.activities.ReportActivity
 import com.termux.shared.android.PackageUtils
 import com.termux.shared.file.FileUtils
@@ -153,24 +146,21 @@ fun TermuxSettingsScreen(activity: Activity) {
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(bottom = 32.dp)
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp)
                         ) {
                             item {
-                                Spacer(modifier = Modifier.height(8.dp))
                                 SettingsActionItem(
                                     title = "Termux",
                                     summary = "Appearance, behavior, terminal setup",
                                     icon = Icons.Rounded.Terminal,
                                     shape = RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Cookie12Sided.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.TERMUX },
-                                    delay = 50
+                                    onClick = { currentScreen = SettingsScreen.TERMUX }
                                 )
                             }
                             
                             if (hasTermuxApi || hasTermuxFloat || hasTermuxTasker || hasTermuxWidget) {
                                 item {
-                                    Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = "Plugins",
                                         style = MaterialTheme.typography.labelLarge,
@@ -187,8 +177,7 @@ fun TermuxSettingsScreen(activity: Activity) {
                                             icon = Icons.Rounded.Extension,
                                             shape = RoundedCornerShape(12.dp),
                                             iconShape = MaterialShapes.Cookie9Sided.toShape(),
-                                            onClick = { /* TODO */ },
-                                            delay = 100
+                                            onClick = { /* TODO */ }
                                         )
                                     }
                                 }
@@ -200,8 +189,7 @@ fun TermuxSettingsScreen(activity: Activity) {
                                             icon = Icons.Rounded.PictureInPicture,
                                             shape = RoundedCornerShape(12.dp),
                                             iconShape = MaterialShapes.Slanted.toShape(),
-                                            onClick = { /* TODO */ },
-                                            delay = 150
+                                            onClick = { /* TODO */ }
                                         )
                                     }
                                 }
@@ -213,8 +201,7 @@ fun TermuxSettingsScreen(activity: Activity) {
                                             icon = Icons.Rounded.Task,
                                             shape = RoundedCornerShape(12.dp),
                                             iconShape = MaterialShapes.Pentagon.toShape(),
-                                            onClick = { /* TODO */ },
-                                            delay = 200
+                                            onClick = { /* TODO */ }
                                         )
                                     }
                                 }
@@ -226,15 +213,13 @@ fun TermuxSettingsScreen(activity: Activity) {
                                             icon = Icons.Rounded.Widgets,
                                             shape = RoundedCornerShape(12.dp),
                                             iconShape = MaterialShapes.Cookie4Sided.toShape(),
-                                            onClick = { /* TODO */ },
-                                            delay = 250
+                                            onClick = { /* TODO */ }
                                         )
                                     }
                                 }
                             }
 
                             item {
-                                Spacer(modifier = Modifier.height(16.dp))
                                 Text(
                                     text = "About",
                                     style = MaterialTheme.typography.labelLarge,
@@ -247,8 +232,7 @@ fun TermuxSettingsScreen(activity: Activity) {
                                     icon = Icons.Rounded.Info,
                                     shape = if (showDonate) RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp) else RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Sunny.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.ABOUT },
-                                    delay = 300
+                                    onClick = { currentScreen = SettingsScreen.ABOUT }
                                 )
                             }
 
@@ -260,8 +244,7 @@ fun TermuxSettingsScreen(activity: Activity) {
                                         icon = Icons.Rounded.Favorite,
                                         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp),
                                         iconShape = MaterialShapes.Clover4Leaf.toShape(),
-                                        onClick = { ShareUtils.openUrl(context, TermuxConstants.TERMUX_DONATE_URL) },
-                                        delay = 350
+                                        onClick = { ShareUtils.openUrl(context, TermuxConstants.TERMUX_DONATE_URL) }
                                     )
                                 }
                             }
@@ -273,48 +256,46 @@ fun TermuxSettingsScreen(activity: Activity) {
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(bottom = 32.dp)
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp)
                         ) {
                             item {
-                                Spacer(modifier = Modifier.height(8.dp))
                                 SettingsActionItem(
                                     title = "Debugging",
                                     summary = "Logging, key logging, and notifications",
                                     icon = Icons.Rounded.BugReport,
-                                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 8.dp, bottomEnd = 8.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Boom.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.DEBUGGING },
-                                    delay = 50
+                                    onClick = { currentScreen = SettingsScreen.DEBUGGING }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            item {
                                 SettingsActionItem(
                                     title = "Terminal IO",
                                     summary = "Soft keyboard behavior and input",
                                     icon = Icons.Rounded.Keyboard,
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Slanted.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.TERMINAL_IO },
-                                    delay = 100
+                                    onClick = { currentScreen = SettingsScreen.TERMINAL_IO }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            item {
                                 SettingsActionItem(
                                     title = "Terminal View",
                                     summary = "Colors, margins, scaling",
                                     icon = Icons.Rounded.Visibility,
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Oval.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.TERMINAL_VIEW },
-                                    delay = 150
+                                    onClick = { currentScreen = SettingsScreen.TERMINAL_VIEW }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            item {
                                 SettingsActionItem(
                                     title = "UI Customization",
                                     summary = "Colors, fonts, styling",
                                     icon = Icons.Rounded.Palette,
-                                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 24.dp, bottomEnd = 24.dp),
+                                    shape = RoundedCornerShape(24.dp),
                                     iconShape = MaterialShapes.Clover4Leaf.toShape(),
-                                    onClick = { currentScreen = SettingsScreen.UI_CUSTOMIZATION },
-                                    delay = 200
+                                    onClick = { currentScreen = SettingsScreen.UI_CUSTOMIZATION }
                                 )
                             }
                         }
@@ -348,77 +329,51 @@ fun SettingsActionItem(
     icon: ImageVector,
     shape: RoundedCornerShape,
     iconShape: Shape = RoundedCornerShape(16.dp),
-    onClick: () -> Unit,
-    delay: Int = 0
+    onClick: () -> Unit
 ) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(delay.toLong())
-        visible = true
-    }
-
-    var isPressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "scale"
-    )
-
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn() + slideInVertically(initialOffsetY = { 50 }),
-        exit = fadeOut()
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
-        Surface(
-            shape = shape,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = Modifier
-                .fillMaxWidth()
-                .scale(scale)
-                .clickable {
-                    isPressed = true
-                    onClick()
-                    // reset press state quickly
-                    isPressed = false
-                }
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                shape = iconShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                modifier = Modifier.size(52.dp)
             ) {
-                Surface(
-                    shape = iconShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    modifier = Modifier.size(52.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = summary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
         }
     }
 }
@@ -431,7 +386,7 @@ private fun showAboutReport(context: Context) {
         aboutString.append("\n\n").append(AndroidUtils.getDeviceInfoMarkdownString(context, true))
         aboutString.append("\n\n").append(TermuxUtils.getImportantLinksMarkdownString(context))
 
-        val userActionName = UserAction.ABOUT.name
+        val userActionName = UserAction.ABOUT.actionName
 
         val reportInfo = ReportInfo(
             userActionName,
@@ -748,7 +703,7 @@ fun TerminalViewSettingsScreen(context: Context) {
 fun AboutSettingsScreen(context: Context) {
     val appInfo = remember {
         try {
-            TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES)
+            TermuxUtils.getAppInfoMarkdownString(context, TermuxUtils.AppInfoMode.TERMUX_AND_PLUGIN_PACKAGES).orEmpty()
                 .replace("### ", "")
                 .replace("## ", "")
                 .replace("* ", "• ")
@@ -863,8 +818,8 @@ fun AboutSettingsScreen(context: Context) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 SettingListTile(
                     title = "Email Support",
-                    selectedValueLabel = "support@termux.com",
-                    onClick = { ShareUtils.openUrl(context, "mailto:support@termux.com") }
+                    selectedValueLabel = "support@termux.dev",
+                    onClick = { ShareUtils.openUrl(context, "mailto:support@termux.dev") }
                 )
             }
         }

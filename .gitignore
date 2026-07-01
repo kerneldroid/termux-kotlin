@@ -19,6 +19,11 @@ local.properties
 
 # Signing files
 .signing/
+*.jks
+*.keystore
+
+# Kotlin build cache
+.kotlin/
 
 # Intellij
 .idea/
