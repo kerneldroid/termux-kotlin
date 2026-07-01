@@ -57,6 +57,8 @@ android {
 
         implementation project(":terminal-view")
         implementation project(":termux-shared")
+
+        implementation "dev.rikka.shizuku:provider:13.1.5"
     }
 
     defaultConfig {
