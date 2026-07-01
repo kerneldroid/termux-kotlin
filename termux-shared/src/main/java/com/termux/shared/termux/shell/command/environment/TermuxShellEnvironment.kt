@@ -9,6 +9,7 @@ import com.termux.shared.shell.command.environment.ShellEnvironmentUtils
 import com.termux.shared.termux.TermuxBootstrap
 import com.termux.shared.termux.TermuxConstants
 import com.termux.shared.termux.shell.TermuxShellUtils
+import java.io.File
 import java.nio.charset.Charset
 import java.util.HashMap
 
@@ -43,14 +44,13 @@ open class TermuxShellEnvironment : AndroidShellEnvironment() {
         if (!isFailSafe) {
             environment[ENV_TMPDIR] = TermuxConstants.TERMUX_TMP_PREFIX_DIR_PATH
             if (TermuxBootstrap.isAppPackageVariantAPTAndroid5()) {
-                // Termux in android 5/6 era shipped busybox binaries in applets directory
-                environment[ENV_PATH] = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":" + TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/applets"
+                environment[ENV_PATH] = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":" + TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/applets" + ":/system/bin"
                 environment[ENV_LD_LIBRARY_PATH] = TermuxConstants.TERMUX_LIB_PREFIX_DIR_PATH
             } else {
-                // Termux binaries on Android 7+ rely on DT_RUNPATH, so LD_LIBRARY_PATH should be unset by default
-                environment[ENV_PATH] = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH
+                environment[ENV_PATH] = TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + ":/system/bin"
                 environment.remove(ENV_LD_LIBRARY_PATH)
             }
+            installTapiFromStaging(currentPackageContext)
         }
 
         return environment
@@ -70,6 +70,87 @@ open class TermuxShellEnvironment : AndroidShellEnvironment() {
 
     companion object {
         private const val LOG_TAG = "TermuxShellEnvironment"
+        const val TAPI_STAGING_BIN_DIR_PATH = "/data/local/tmp/tapi_staging/bin"
+        const val TAPI_SCRIPT_NAME = "tapi"
+        const val TAPI_VERSION_NAME = "version"
+
+        fun installTapiFromStaging(currentPackageContext: Context) {
+            android.util.Log.e("TAPI_DEBUG", "installTapiFromStaging called")
+            try {
+                val stagingScript = File(TAPI_STAGING_BIN_DIR_PATH, TAPI_SCRIPT_NAME)
+                android.util.Log.e("TAPI_DEBUG", "staging exists=" + stagingScript.exists())
+                if (!stagingScript.exists()) return
+
+                val destDir = File(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH)
+                val destScript = File(destDir, TAPI_SCRIPT_NAME)
+                destDir.mkdirs()
+                destScript.delete()
+                stagingScript.copyTo(destScript)
+                destScript.setExecutable(true)
+                android.util.Log.e("TAPI_DEBUG", "script copied, size=" + destScript.length())
+
+                val tapiDir = File(TermuxConstants.TERMUX_HOME_DIR_PATH, ".tapi")
+                val destDex = File(tapiDir, "rish_shizuku.dex")
+                try {
+                    File(tapiDir, "tapi.dex").delete()
+                } catch (_: Throwable) {}
+
+                var nightzukuApkFile: File? = null
+                try {
+                    val pm = currentPackageContext.packageManager
+                    val appInfo = pm.getApplicationInfo("kerneldroid.nightzuku", 0)
+                    nightzukuApkFile = File(appInfo.sourceDir)
+                } catch (_: Throwable) {}
+
+                val needExtract = !destDex.exists() || 
+                    (nightzukuApkFile != null && nightzukuApkFile.exists() && nightzukuApkFile.lastModified() > destDex.lastModified())
+
+                if (needExtract) {
+                    tapiDir.mkdirs()
+                    var copied = false
+
+                    // 1. Try copying staging dex first
+                    val stagingDex = File("/data/local/tmp/tapi_staging/tapi.dex")
+                    if (stagingDex.exists() && stagingDex.length() > 30000) {
+                        try {
+                            destDex.delete()
+                            stagingDex.copyTo(destDex)
+                            destDex.setLastModified(stagingDex.lastModified())
+                            android.util.Log.e("TAPI_DEBUG", "dex copied from staging, size=" + destDex.length())
+                            copied = true
+                        } catch (e: Throwable) {
+                            android.util.Log.e("TAPI_DEBUG", "failed to copy from staging: ${e.message}")
+                        }
+                    }
+
+                    // 2. Fall back to extracting directly from Nightzuku APK
+                    if (!copied && nightzukuApkFile != null && nightzukuApkFile.exists()) {
+                        try {
+                            destDex.delete()
+                            java.util.zip.ZipFile(nightzukuApkFile).use { zip ->
+                                val entry = zip.getEntry("assets/rish_shizuku.dex")
+                                if (entry != null) {
+                                    zip.getInputStream(entry).use { input ->
+                                        destDex.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                    destDex.setLastModified(nightzukuApkFile.lastModified())
+                                    android.util.Log.e("TAPI_DEBUG", "dex extracted from APK, size=" + destDex.length())
+                                } else {
+                                    android.util.Log.e("TAPI_DEBUG", "rish_shizuku.dex not found in APK assets")
+                                }
+                            }
+                        } catch (e: Throwable) {
+                            android.util.Log.e("TAPI_DEBUG", "failed to extract dex from APK: ${e.message}")
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("TAPI_DEBUG", "FAILED: ${e.message}")
+                Logger.logErrorExtended(LOG_TAG, "Failed to install TAPI from staging: ${e.message}")
+            }
+        }
 
         /** Environment variable for the termux [TermuxConstants.TERMUX_PREFIX_DIR_PATH]. */
         const val ENV_PREFIX = "PREFIX"
